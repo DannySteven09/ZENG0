@@ -114,12 +114,16 @@ const AdminView = {
                             <div><span class="mini-value" id="mini-auxiliares">${state.auxiliaresActivos}</span><span class="mini-label">Auxiliares</span></div>
                         </div>
                         <div class="metric-card-mini glass">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <div><span class="mini-value" id="mini-hallazgos">0</span><span class="mini-label">Hallazgos</span></div>
+                            <i class="fas fa-coins"></i>
+                            <div><span class="mini-value" id="mini-valor-total">₡0</span><span class="mini-label">Valor Inventario</span></div>
                         </div>
                         <div class="metric-card-mini glass">
                             <i class="fas fa-chart-line"></i>
                             <div><span class="mini-value text-success" id="mini-sobra">+₡${(state.sobraMonetaria || 0).toLocaleString()}</span><span class="mini-label">Sobra</span></div>
+                        </div>
+                        <div class="metric-card-mini glass">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div><span class="mini-value" id="mini-hallazgos">0</span><span class="mini-label">Hallazgos</span></div>
                         </div>
                     </section>
                     <div class="admin-main-grid">
@@ -219,27 +223,16 @@ const AdminView = {
 
                         <div class="audit-filters-grid">
                             <input id="audit-filter-user" class="filter-input" placeholder="Usuario">
+                            <input type="date" id="audit-filter-date" class="filter-input">
                             <select id="audit-filter-action" class="filter-input">
-                                <option value="">Todas las acciones</option>
-                                <option value="LOGIN">LOGIN</option>
-                                <option value="LOGOUT">LOGOUT</option>
-                                <option value="FAILED_LOGIN">FAILED_LOGIN</option>
-                                <option value="CREATE_USER">CREATE_USER</option>
-                                <option value="UPDATE_USER">UPDATE_USER</option>
-                                <option value="DELETE_USER">DELETE_USER</option>
-                                <option value="CONTEO_REGISTRADO">CONTEO_REGISTRADO</option>
-                                <option value="CONTEO_EDITADO">CONTEO_EDITADO</option>
-                                <option value="CONTEO_ELIMINADO">CONTEO_ELIMINADO</option>
-                                <option value="CONTEO_AGREGADO_REVISION">CONTEO_AGREGADO_REVISION</option>
-                                <option value="CONTEO_EDITADO_REVISION">CONTEO_EDITADO_REVISION</option>
-                                <option value="CONTEO_ELIMINADO_REVISION">CONTEO_ELIMINADO_REVISION</option>
-                                <option value="HALLAZGO_REPORTADO">HALLAZGO_REPORTADO</option>
-                                <option value="HALLAZGO_APROBADO">HALLAZGO_APROBADO</option>
-                                <option value="HALLAZGO_RECHAZADO">HALLAZGO_RECHAZADO</option>
-                                <option value="HALLAZGO_AGREGADO_JEFE">HALLAZGO_AGREGADO_JEFE</option>
+                                <option value="">Todas las actividades</option>
+                                <option value="SESIÓN">Sesiones (Login/Logout)</option>
+                                <option value="HALLAZGO_REPORTADO">Hallazgos</option>
+                                <option value="TAREA_COMPLETADA">Ciclos</option>
+                                <option value="IMPORT_PRODUCTOS">Importaciones</option>
+                                <option value="CREATE_USER">Usuarios</option>
                             </select>
-                            <input id="audit-filter-table" class="filter-input" placeholder="Tabla">
-                            <input id="audit-filter-text" class="filter-input" placeholder="Texto general">
+                            <input id="audit-filter-text" class="filter-input" placeholder="Buscar en detalle...">
                         </div>
 
                         <div class="audit-filter-actions">
@@ -315,7 +308,7 @@ const AdminView = {
     // ═══════════════════════════════════════════════════════════
     renderLogsTable(logs = []) {
         if (logs.length === 0) return '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No hay logs</p></div>';
-        return `<table class="admin-table"><thead><tr><th>HORA</th><th>USUARIO</th><th>ACCIÓN</th><th>DETALLE</th></tr></thead><tbody>${logs.map(l => `<tr><td class="mono">${l.hora || ''}</td><td>${l.usuario || 'Sistema'}</td><td>${l.accion || '-'}</td><td class="text-dim" style="font-size:12px">${l.mensaje || '-'}</td></tr>`).join('')}</tbody></table>`;
+        return `<table class="admin-table"><thead><tr><th>HORA</th><th>USUARIO</th><th>DETALLE</th></tr></thead><tbody>${logs.map(l => `<tr><td class="mono">${l.hora || ''}</td><td>${l.usuario || 'Sistema'}</td><td class="text-dim" style="font-size:12px">${l.mensaje || '-'}</td></tr>`).join('')}</tbody></table>`;
     },
 
     renderRanking(ranking = []) {
@@ -530,16 +523,20 @@ const AdminView = {
             });
             const diffTotal = sobraUnidades - mermaUnidades;
             const precision = lineasTotales > 0 ? Math.round(((lineasTotales - Math.abs(diffTotal)) / lineasTotales) * 100) : 0;
+            
+            // Valor Total Inventario
+            const valorTotal = productos.reduce((acc, p) => acc + ((p.precio || 0) * (p.existencia || 0)), 0);
+
             document.getElementById('metric-diff').textContent = diffTotal;
             document.getElementById('metric-precision').textContent = precision + '%';
             document.getElementById('metric-lineas').textContent = lineasContadas;
             document.getElementById('metric-merma').textContent = '-₡' + mermaMonetaria.toLocaleString();
             document.getElementById('mini-tareas').textContent = tareas.filter(t => t.estado !== 'completado').length;
+            document.getElementById('mini-hallazgos').textContent = hallazgos.length;
+            document.getElementById('mini-valor-total').textContent = '₡' + valorTotal.toLocaleString();
 
-            // Auxiliares ahora viene de BD (async)
             const auxiliares = await window.AuthModel.getAuxiliares();
             document.getElementById('mini-auxiliares').textContent = auxiliares.length;
-            document.getElementById('mini-hallazgos').textContent = hallazgos.length;
             document.getElementById('mini-sobra').textContent = '+₡' + sobraMonetaria.toLocaleString();
 
             const logs = await window.LogController.obtenerTodos();
@@ -727,21 +724,28 @@ const AdminView = {
 
     async aplicarFiltroAuditoria() {
         const usuario = document.getElementById('audit-filter-user')?.value?.trim() || '';
-        const accion = document.getElementById('audit-filter-action')?.value || '';
-        const tabla = document.getElementById('audit-filter-table')?.value?.trim() || '';
+        const group = document.getElementById('audit-filter-action')?.value || '';
+        const fecha = document.getElementById('audit-filter-date')?.value || '';
         const texto = document.getElementById('audit-filter-text')?.value?.trim() || '';
 
-        const logs = await window.LogController.filtrar({ usuario, accion, tabla, texto });
+        // Mapeo de grupos a acciones reales
+        let accion = group;
+        if (group === 'SESIÓN') accion = ['LOGIN', 'LOGOUT', 'FAILED_LOGIN'];
+        if (group === 'HALLAZGO_REPORTADO') accion = ['HALLAZGO_REPORTADO', 'HALLAZGO_APROBADO', 'HALLAZGO_RECHAZADO'];
+        if (group === 'TAREA_COMPLETADA') accion = ['TAREA_ASIGNADA', 'TAREA_INICIADA', 'TAREA_COMPLETADA', 'TAREA_APROBADA', 'TAREA_RECHAZADA', 'TAREA_DEVUELTA'];
+        if (group === 'CREATE_USER') accion = ['CREATE_USER', 'UPDATE_USER', 'DELETE_USER'];
+
+        const logs = await window.LogController.filtrar({ usuario, accion, texto, fecha });
         const container = document.getElementById('audit-full-container');
         if (!container) return;
         container.innerHTML = this.renderAuditoriaTable(logs);
     },
 
     async limpiarFiltroAuditoria() {
-        document.getElementById('audit-filter-user').value = '';
-        document.getElementById('audit-filter-action').value = '';
-        document.getElementById('audit-filter-table').value = '';
-        document.getElementById('audit-filter-text').value = '';
+        if (document.getElementById('audit-filter-user')) document.getElementById('audit-filter-user').value = '';
+        if (document.getElementById('audit-filter-date')) document.getElementById('audit-filter-date').value = '';
+        if (document.getElementById('audit-filter-action')) document.getElementById('audit-filter-action').value = '';
+        if (document.getElementById('audit-filter-text')) document.getElementById('audit-filter-text').value = '';
         await this.cargarAuditoria();
     },
 
@@ -754,23 +758,22 @@ const AdminView = {
         <table class="admin-table audit-admin-table">
             <thead>
                 <tr>
-                    <th>FECHA</th>
+                    <th>FECHA / HORA</th>
                     <th>USUARIO</th>
-                    <th>ACCIÓN</th>
-                    <th>TABLA</th>
-                    <th>ID</th>
-                    <th>DETALLE</th>
+                    <th>MENSAJE DE ACTIVIDAD</th>
                 </tr>
             </thead>
             <tbody>
                 ${logs.map(log => `
                     <tr>
-                        <td class="mono">${new Date(log.timestamp).toLocaleString('es-CR')}</td>
-                        <td>${log.usuario_nombre || 'Sistema'}</td>
-                        <td><span class="role-badge">${log.accion || '-'}</span></td>
-                        <td><code>${log.tabla || '-'}</code></td>
-                        <td>${log.registro_id ?? '-'}</td>
-                        <td class="audit-detail-cell">${this.formatAuditDetail(log)}</td>
+                        <td class="mono" style="font-size:11px">${new Date(log.timestamp).toLocaleString('es-CR')}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div class="user-avatar-mini" style="width:24px;height:24px;font-size:10px;background:rgba(255,255,255,0.02);">${(log.usuario_nombre || 'S').charAt(0)}</div>
+                                <span>${log.usuario_nombre || 'Sistema'}</span>
+                            </div>
+                        </td>
+                        <td style="font-size:13px;color:#e2e6eb;">${log.mensaje || '-'}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -837,7 +840,7 @@ const AdminView = {
 .btn-action { background: rgba(255,255,255,0.1); border: none; color: white; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; }
 .btn-export { background: var(--admin-red); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-.metrics-grid.secondary { grid-template-columns: repeat(4, 1fr); }
+.metrics-grid.secondary { grid-template-columns: repeat(5, 1fr); }
 .metric-card { padding: 25px; border-radius: 16px; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
 .metric-card.glow-red { border-color: rgba(200,16,46,0.3); box-shadow: 0 0 30px rgba(200,16,46,0.1); }
 .metric-card.glow-warning { border-color: rgba(245,158,11,0.3); }
@@ -852,7 +855,23 @@ const AdminView = {
 .admin-main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .section-header h3, .section-header h2 { font-size: 16px; display: flex; align-items: center; gap: 10px; }
-.filter-input { padding: 8px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 13px; }
+.filter-input { 
+    padding: 8px 15px; 
+    border-radius: 8px; 
+    border: 1px solid rgba(255,255,255,0.1); 
+    background: #0a0a0a; 
+    color: white; 
+    font-size: 13px; 
+    accent-color: var(--admin-red);
+}
+.filter-input option {
+    background: #0a0a0a;
+    color: white;
+}
+.filter-input:focus {
+    border-color: var(--admin-red);
+    outline: none;
+}
 .audit-section, .ranking-section { padding: 25px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
 .admin-table { width: 100%; border-collapse: collapse; }
 .admin-table th { text-align: left; padding: 12px 15px; font-size: 11px; color: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -973,8 +992,50 @@ code { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; 
         grid-template-columns: 1fr;
     }
 }
-@media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } .admin-main-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } .metrics-grid.secondary { grid-template-columns: repeat(3, 1fr); } .admin-main-grid { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .sidebar { transform: translateX(-100%); } .sidebar.collapsed { transform: translateX(0); width: 260px; } .main-content { margin-left: 0; } .mobile-menu { display: block; } .metrics-grid { grid-template-columns: 1fr; } .usuarios-stats { grid-template-columns: 1fr; } }
+
+/* ── MODO CLARO EN ADMIN ── */
+body.light-mode .dashboard-wrapper { background: #fdfdfd; color: #1e1e1e; }
+body.light-mode .sidebar { background: #ffffff !important; border-right: 1px solid #e0e0e0 !important; }
+body.light-mode .top-header { background: #ffffff !important; border: 1px solid #e0e0e0 !important; color: #1e1e1e !important; }
+body.light-mode .glass, 
+body.light-mode .metric-card, 
+body.light-mode .metric-card-mini, 
+body.light-mode .audit-section, 
+body.light-mode .ranking-section, 
+body.light-mode .usuarios-table,
+body.light-mode .ciclicos-card { 
+    background: #ffffff !important; 
+    border: 1px solid #e0e0e0 !important; 
+    color: #1e1e1e !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+body.light-mode .mini-value, body.light-mode .metric-value, body.light-mode h1, body.light-mode h2, body.light-mode h3 { color: #1e1e1e !important; }
+body.light-mode .mini-label, body.light-mode .metric-label, body.light-mode .text-dim, body.light-mode .user-role { color: #5f6368 !important; }
+body.light-mode .filter-input { 
+    background: #f1f3f4 !important; 
+    color: #1e1e1e !important; 
+    border: 1px solid #dadce0 !important; 
+}
+body.light-mode .filter-input option { background: #ffffff !important; color: #1e1e1e !important; }
+body.light-mode .admin-table th { color: #5f6368; border-bottom: 1px solid #e8eaed; }
+body.light-mode .admin-table td { border-bottom: 1px solid #f8f9fa; color: #1e1e1e !important; }
+body.light-mode .audit-table-wrap { background: #fdfdfd !important; }
+body.light-mode .logo { color: #1e1e1e !important; }
+body.light-mode .toggle-btn, body.light-mode .mobile-menu, body.light-mode .user-name { color: #1e1e1e !important; }
+body.light-mode code { background: #f1f3f4 !important; color: #c8102e !important; }
+body.light-mode .btn-secondary, body.light-mode .btn-action { background: #f1f3f4 !important; color: #1e1e1e !important; border: 1px solid #dadce0 !important; }
+body.light-mode .btn-secondary:hover { background: #e8eaed !important; }
+body.light-mode .rank-item { background: #f8f9fa !important; border: 1px solid #e0e0e0 !important; }
+body.light-mode .modal-content { background: #ffffff !important; color: #1e1e1e !important; box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; }
+body.light-mode .modal-header, body.light-mode .modal-footer { border-color: #e8eaed !important; }
+body.light-mode .modal-close { color: #5f6368 !important; }
+body.light-mode .form-group label { color: #5f6368 !important; }
+body.light-mode .form-group input, body.light-mode .form-group select { background: #f1f3f4 !important; color: #1e1e1e !important; border-color: #dadce0 !important; }
+body.light-mode .audit-json-block { background: #f1f3f4 !important; }
+body.light-mode .audit-json-block strong { color: #5f6368 !important; }
+body.light-mode .audit-json-block pre { color: #1e1e1e !important; }
         `;
         document.head.appendChild(style);
     }

@@ -218,48 +218,71 @@ const LogController = {
     // ═══════════════════════════════════════════════════════════
     // FILTRAR
     // ═══════════════════════════════════════════════════════════
-    async filtrar({ usuario = '', accion = '', tabla = '', texto = '', limite = 200 } = {}) {
-        try {
-            if (navigator.onLine && window.supabaseClient) {
-                let query = window.supabaseClient
+    async filtrar({ usuario = '', accion = '', tabla = '', texto = '', fecha = '', limite = 200 } = {}) {
+        const isOnline = navigator.onLine;
+
+        if (isOnline) {
+            try {
+                let query = window.supabaseClient // Changed from window.supabase to window.supabaseClient to match original code
                     .from('auditoria')
                     .select('*')
                     .order('timestamp', { ascending: false })
                     .limit(limite);
 
                 if (usuario) query = query.ilike('usuario_nombre', `%${usuario}%`);
-                if (accion) query = query.eq('accion', accion);
+                if (accion) {
+                    if (Array.isArray(accion)) query = query.in('accion', accion);
+                    else query = query.eq('accion', accion);
+                }
                 if (tabla) query = query.eq('tabla', tabla);
-
-                const { data, error } = await query;
-                if (error) throw error;
-
-                let logs = data || [];
-
-                // Filtro de texto libre sobre el campo mensaje (más rápido que JSON.stringify)
-                if (texto) {
-                    const q = texto.toLowerCase();
-                    logs = logs.filter(log =>
-                        (log.mensaje || '').toLowerCase().includes(q) ||
-                        (log.usuario_nombre || '').toLowerCase().includes(q)
-                    );
+                
+                if (fecha) {
+                    const start = `${fecha}T00:00:00`;
+                    const end = `${fecha}T23:59:59`;
+                    query = query.gte('timestamp', start).lte('timestamp', end);
                 }
 
-                return logs;
+                if (texto) {
+                    query = query.ilike('mensaje', `%${texto}%`);
+                }
+                
+                const { data, error } = await query;
+                if (error) throw error;
+                return data || [];
+
+            } catch (err) {
+                console.warn('LogController.filtrar — usando Dexie:', err.message);
             }
-        } catch (err) {
-            console.warn('LogController.filtrar — usando Dexie:', err.message);
         }
 
         // Fallback local
         try {
             let logs = await window.db.auditoria.orderBy('timestamp').reverse().toArray();
+            
+            if (usuario) {
+                const q = usuario.toLowerCase();
+                logs = logs.filter(l => (l.usuario_nombre || '').toLowerCase().includes(q));
+            }
+            if (accion) {
+                const actions = Array.isArray(accion) ? accion : [accion];
+                logs = logs.filter(l => actions.includes(l.accion));
+            }
+            if (tabla) { // Added tabla filtering for local mode
+                logs = logs.filter(l => l.tabla === tabla);
+            }
+            if (fecha) {
+                logs = logs.filter(l => l.timestamp.startsWith(fecha));
+            }
             if (texto) {
                 const q = texto.toLowerCase();
-                logs = logs.filter(l => (l.mensaje || '').toLowerCase().includes(q));
+                logs = logs.filter(l => 
+                    (l.mensaje || '').toLowerCase().includes(q) ||
+                    (l.usuario_nombre || '').toLowerCase().includes(q)
+                );
             }
-            return logs;
-        } catch (e) {
+            return logs.slice(0, limite);
+        } catch (err) {
+            console.error('Error filtrando logs locales:', err);
             return [];
         }
     }
