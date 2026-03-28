@@ -8,81 +8,60 @@ const LoginView = {
     render(container) {
         container.innerHTML = `
         <div class="login-wrapper">
-            <div class="login-bg">
-                <div class="bg-shape shape-1"></div>
-                <div class="bg-shape shape-2"></div>
-                <div class="bg-shape shape-3"></div>
-            </div>
-            
+            <video class="login-video-bg" autoplay muted loop playsinline>
+                <source src="kling_20260328_作品_First_pers_3081_0.mp4" type="video/mp4">
+            </video>
+            <div class="login-video-overlay"></div>
+
             <div class="login-container">
                 <div class="login-card glass">
                     <div class="login-header">
                         <div class="logo-big">ZEN<span>GO</span></div>
                         <p class="tagline">High Performance Inventory</p>
                     </div>
-                    
+
                     <form id="login-form" class="login-form">
                         <div class="form-group">
                             <label for="email">
                                 <i class="fas fa-user"></i>
                                 Usuario
                             </label>
-                            <input type="email" id="email" name="email" 
-                                   placeholder="correo@ejemplo.com" 
+                            <input type="email" id="email" name="email"
+                                   placeholder="correo@ejemplo.com"
                                    autocomplete="email" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="password">
                                 <i class="fas fa-lock"></i>
                                 Contraseña
                             </label>
                             <div class="password-wrapper">
-                                <input type="password" id="password" name="password" 
-                                       placeholder="••••••••" 
+                                <input type="password" id="password" name="password"
+                                       placeholder="••••••••"
                                        autocomplete="current-password" required>
                                 <button type="button" class="toggle-password" onclick="LoginView.togglePassword()">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                         </div>
-                        
+
                         <button type="submit" class="btn-login">
                             <span>Iniciar Sesión</span>
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </form>
-                    
-                    <div class="demo-users">
-                        <p>Usuarios de prueba:</p>
-                        <div class="demo-buttons">
-                            <button type="button" onclick="LoginView.fillDemo('admin@zengo.com', '123')">
-                                <i class="fas fa-user-shield"></i> Admin
-                            </button>
-                            <button type="button" onclick="LoginView.fillDemo('jefe@zengo.com', '123')">
-                                <i class="fas fa-user-tie"></i> Jefe
-                            </button>
-                            <button type="button" onclick="LoginView.fillDemo('aux@zengo.com', '123')">
-                                <i class="fas fa-user"></i> Auxiliar
-                            </button>
-                        </div>
-                    </div>
                 </div>
-                
+
                 <div class="login-footer">
                     <p>Office Depot Costa Rica</p>
-                    <span>v1.0.0</span>
+                    <span>v1.7.0</span>
                 </div>
             </div>
         </div>
         `;
 
         this.injectStyles();
-    },
-
-    fillDemo(email, password) {
-        document.getElementById('email').value = email;
-        document.getElementById('password').value = password;
     },
 
     togglePassword() {
@@ -114,65 +93,25 @@ const LoginView = {
                 background: #020202;
             }
 
-            .login-bg {
+            .login-video-bg {
                 position: absolute;
                 inset: 0;
-                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                z-index: 0;
             }
 
-            .bg-shape {
+            .login-video-overlay {
                 position: absolute;
-                border-radius: 50%;
-                filter: blur(80px);
-                opacity: 0.5;
-            }
-
-            .shape-1 {
-                width: 600px;
-                height: 600px;
-                background: linear-gradient(135deg, #C8102E, #a00d24);
-                top: -200px;
-                right: -200px;
-                animation: float1 15s ease-in-out infinite;
-            }
-
-            .shape-2 {
-                width: 400px;
-                height: 400px;
-                background: linear-gradient(135deg, #7C3AED, #5b21b6);
-                bottom: -100px;
-                left: -100px;
-                animation: float2 12s ease-in-out infinite;
-            }
-
-            .shape-3 {
-                width: 300px;
-                height: 300px;
-                background: linear-gradient(135deg, #2563EB, #1d4ed8);
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                animation: float3 10s ease-in-out infinite;
-            }
-
-            @keyframes float1 {
-                0%, 100% { transform: translate(0, 0) rotate(0deg); }
-                50% { transform: translate(-50px, 50px) rotate(10deg); }
-            }
-
-            @keyframes float2 {
-                0%, 100% { transform: translate(0, 0) rotate(0deg); }
-                50% { transform: translate(30px, -30px) rotate(-10deg); }
-            }
-
-            @keyframes float3 {
-                0%, 100% { transform: translate(-50%, -50%) scale(1); }
-                50% { transform: translate(-50%, -50%) scale(1.1); }
+                inset: 0;
+                background: rgba(0, 0, 0, 0.55);
+                z-index: 1;
             }
 
             .login-container {
                 position: relative;
-                z-index: 10;
+                z-index: 2;
                 width: 100%;
                 max-width: 420px;
                 padding: 20px;
@@ -303,50 +242,6 @@ const LoginView = {
                 transform: translateY(0);
             }
 
-            .demo-users {
-                margin-top: 30px;
-                padding-top: 25px;
-                border-top: 1px solid rgba(255, 255, 255, 0.08);
-            }
-
-            .demo-users p {
-                text-align: center;
-                font-size: 11px;
-                color: rgba(255, 255, 255, 0.4);
-                margin-bottom: 15px;
-            }
-
-            .demo-buttons {
-                display: flex;
-                gap: 10px;
-            }
-
-            .demo-buttons button {
-                flex: 1;
-                padding: 10px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                background: rgba(255, 255, 255, 0.03);
-                color: rgba(255, 255, 255, 0.6);
-                font-size: 11px;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 5px;
-                transition: all 0.2s;
-            }
-
-            .demo-buttons button:hover {
-                background: rgba(255, 255, 255, 0.08);
-                color: white;
-                border-color: rgba(255, 255, 255, 0.2);
-            }
-
-            .demo-buttons button i {
-                font-size: 16px;
-            }
-
             .login-footer {
                 text-align: center;
                 margin-top: 30px;
@@ -367,10 +262,6 @@ const LoginView = {
 
                 .logo-big {
                     font-size: 40px;
-                }
-
-                .demo-buttons {
-                    flex-direction: column;
                 }
             }
         `;

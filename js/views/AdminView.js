@@ -82,61 +82,80 @@ const AdminView = {
 
                 <!-- Dashboard -->
                 <div id="section-dashboard" class="section-content">
-                    <section class="metrics-grid">
-                        <div class="metric-card glass glow-red">
-                            <div class="metric-header"><i class="fas fa-balance-scale"></i></div>
-                            <span class="metric-value" id="metric-diff">${state.diffTotal}</span>
-                            <span class="metric-label">Diferencia Neta</span>
+                    <section class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-coins" style="color:#C8102E;"></i></div>
+                            <span class="metric-value" id="metric-valor-inv" style="font-size:1.4rem;">₡0</span>
+                            <span class="metric-label">Valor Total Inventario</span>
                         </div>
                         <div class="metric-card glass">
-                            <div class="metric-header"><i class="fas fa-bullseye"></i></div>
-                            <span class="metric-value" id="metric-precision">${state.precision}%</span>
-                            <span class="metric-label">Precisión</span>
-                        </div>
-                        <div class="metric-card glass">
-                            <div class="metric-header"><i class="fas fa-clipboard-check"></i></div>
-                            <span class="metric-value" id="metric-lineas">${state.lineasContadas}</span>
-                            <span class="metric-label">Líneas Auditadas</span>
+                            <div class="metric-header"><i class="fas fa-boxes" style="color:#3b82f6;"></i></div>
+                            <span class="metric-value" id="metric-cant-productos">0</span>
+                            <span class="metric-label">Total Productos</span>
                         </div>
                         <div class="metric-card glass glow-warning">
-                            <div class="metric-header"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="metric-header"><i class="fas fa-arrow-down" style="color:#ef4444;"></i></div>
                             <span class="metric-value text-error" id="metric-merma">-₡${state.mermaMonetaria.toLocaleString()}</span>
-                            <span class="metric-label">Merma Monetaria</span>
+                            <span class="metric-label">Merma (Faltante)</span>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-arrow-up" style="color:#10b981;"></i></div>
+                            <span class="metric-value text-success" id="metric-sobra">+₡${(state.sobraMonetaria || 0).toLocaleString()}</span>
+                            <span class="metric-label">Sobra (Sobrante)</span>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i></div>
+                            <span class="metric-value" id="metric-hallazgos" style="color:#f59e0b;">0</span>
+                            <span class="metric-label">Hallazgos</span>
                         </div>
                     </section>
-                    <section class="metrics-grid secondary">
-                        <div class="metric-card-mini glass">
-                            <i class="fas fa-tasks"></i>
-                            <div><span class="mini-value" id="mini-tareas">${state.tareasActivas}</span><span class="mini-label">Tareas</span></div>
+
+                    <!-- Ranking de Auxiliares -->
+                    <div class="glass" style="padding:24px;border-radius:16px;margin-top:20px;">
+                        <div class="section-header" style="margin-bottom:16px;">
+                            <h3 style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas fa-trophy" style="color:#f59e0b;"></i> Ranking de Auxiliares
+                            </h3>
+                            <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:.5;">Precisión histórica acumulada</span>
                         </div>
-                        <div class="metric-card-mini glass">
-                            <i class="fas fa-users"></i>
-                            <div><span class="mini-value" id="mini-auxiliares">${state.auxiliaresActivos}</span><span class="mini-label">Auxiliares</span></div>
+                        <div id="admin-ranking-container">
+                            <div class="empty-state small"><i class="fas fa-medal"></i><p>Cargando ranking...</p></div>
                         </div>
-                        <div class="metric-card-mini glass">
-                            <i class="fas fa-coins"></i>
-                            <div><span class="mini-value" id="mini-valor-total">₡0</span><span class="mini-label">Valor Inventario</span></div>
-                        </div>
-                        <div class="metric-card-mini glass">
-                            <i class="fas fa-chart-line"></i>
-                            <div><span class="mini-value text-success" id="mini-sobra">+₡${(state.sobraMonetaria || 0).toLocaleString()}</span><span class="mini-label">Sobra</span></div>
-                        </div>
-                        <div class="metric-card-mini glass">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <div><span class="mini-value" id="mini-hallazgos">0</span><span class="mini-label">Hallazgos</span></div>
-                        </div>
-                    </section>
-                    <div class="admin-main-grid">
-                        <section class="audit-section glass">
-                            <div class="section-header">
-                                <h3><i class="fas fa-fingerprint"></i> Logs de Auditoría</h3>
-                                <input type="text" placeholder="Filtrar..." class="filter-input" oninput="AdminView.filterLogs(this.value)">
+                    </div>
+
+                    <!-- Gráficos Estadísticos Animados (Fila 1) -->
+                    <div class="admin-main-grid" style="grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
+                        <section class="glass" style="padding:24px; border-radius:16px; position:relative; overflow:hidden;">
+                            <div class="section-header" style="margin-bottom:20px;">
+                                <h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-chart-area" style="color:#C8102E;"></i> Tendencia de Inventario</h3>
+                                <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:.5;">Balance Mensual CRC</span>
                             </div>
-                            <div class="table-holder" id="logs-container">${this.renderLogsTable(state.logs)}</div>
+                            <div id="chart-trend" style="width:100%;height:220px;position:relative;"></div>
                         </section>
-                        <section class="ranking-section glass">
-                            <div class="section-header"><h3><i class="fas fa-trophy"></i> Ranking</h3></div>
-                            <div class="rank-list" id="ranking-container">${this.renderRanking(state.ranking)}</div>
+                        <section class="glass chart-dark-card" style="padding:24px; border-radius:16px; background:linear-gradient(135deg,#0b1c30 0%,#1a1a2e 100%); border:1px solid rgba(255,255,255,0.05);">
+                            <h3 class="cdc-title" style="font-size:14px;font-weight:700;margin-bottom:20px;color:#fff;"><i class="fas fa-chart-pie" style="color:#C8102E;margin-right:8px;"></i>Distribución por Categoría</h3>
+                            <div id="chart-categories" style="width:100%;"></div>
+                        </section>
+                    </div>
+                    <!-- Gráficos (Fila 2) -->
+                    <div class="admin-main-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
+                        <section class="glass" style="padding:24px; border-radius:16px; position:relative; overflow:hidden;">
+                            <div class="section-header" style="margin-bottom:16px;">
+                                <h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-chart-pie" style="color:#10b981;"></i> Composición Merma</h3>
+                            </div>
+                            <div id="chart-pie" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center;"></div>
+                        </section>
+                        <section class="glass" style="padding:24px; border-radius:16px; position:relative; overflow:hidden;">
+                            <div class="section-header" style="margin-bottom:16px;">
+                                <h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-chart-bar" style="color:#3b82f6;"></i> Top 5 Categorías (Unidades)</h3>
+                            </div>
+                            <div id="chart-bars" style="width:100%;height:220px;position:relative;"></div>
+                        </section>
+                        <section class="glass" style="padding:24px; border-radius:16px; position:relative; overflow:hidden;">
+                            <div class="section-header" style="margin-bottom:16px;">
+                                <h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-tachometer-alt" style="color:#f59e0b;"></i> Cobertura de Conteo</h3>
+                            </div>
+                            <div id="chart-donut" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center;"></div>
                         </section>
                     </div>
                 </div>
@@ -227,10 +246,11 @@ const AdminView = {
                             <select id="audit-filter-action" class="filter-input">
                                 <option value="">Todas las actividades</option>
                                 <option value="SESIÓN">Sesiones (Login/Logout)</option>
-                                <option value="HALLAZGO_REPORTADO">Hallazgos</option>
-                                <option value="TAREA_COMPLETADA">Ciclos</option>
-                                <option value="IMPORT_PRODUCTOS">Importaciones</option>
-                                <option value="CREATE_USER">Usuarios</option>
+                                <option value="TAREA_COMPLETADA">Cíclicos (asignación, conteo, entrega)</option>
+                                <option value="HALLAZGO_REPORTADO">Hallazgos (reporte, aprobación)</option>
+                                <option value="CONTEOS">Conteos registrados</option>
+                                <option value="IMPORT_PRODUCTOS">Importaciones, Exportaciones y Cierre de Ciclo</option>
+                                <option value="CREATE_USER">Gestión de usuarios</option>
                             </select>
                             <input id="audit-filter-text" class="filter-input" placeholder="Buscar en detalle...">
                         </div>
@@ -447,7 +467,7 @@ const AdminView = {
     // UI FUNCTIONS
     // ═══════════════════════════════════════════════════════════
     toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); },
-    toggleTheme() { document.body.classList.toggle('light-mode'); },
+    toggleTheme() { document.body.classList.toggle('light-mode'); this.loadDashboardData(); },
 
     showSection(sectionId) {
         ScannerController.detenerScannerConsulta();
@@ -506,51 +526,353 @@ const AdminView = {
     async loadDashboardData() {
         try {
             const productos = await window.db.productos.toArray();
-            const conteos = await window.db.conteos_realizados.toArray();
             const tareas = await window.db.tareas.toArray();
-            const hallazgos = await window.db.hallazgos.where('estado').equals('pendiente').toArray();
-            const lineasTotales = productos.length;
-            const lineasContadas = conteos.length;
-            let mermaUnidades = 0, sobraUnidades = 0, mermaMonetaria = 0, sobraMonetaria = 0;
             const productosMap = new Map(productos.map(p => [p.upc, p]));
-            conteos.forEach(c => {
-                const prod = productosMap.get(c.upc);
-                if (prod) {
-                    const diff = (c.cantidad || 0) - (prod.existencia || 0);
-                    if (diff < 0) { mermaUnidades += Math.abs(diff); mermaMonetaria += Math.abs(diff) * (prod.precio || 0); }
-                    else if (diff > 0) { sobraUnidades += diff; sobraMonetaria += diff * (prod.precio || 0); }
-                }
+
+            let mermaMonetaria = 0, sobraMonetaria = 0, totalHallazgos = 0;
+
+            // Calcular merma/sobra desde tareas.productos (excluir canceladas)
+            // Los datos de conteo viven en tareas.productos[].conteos, no en conteos_realizados
+            const tareasConDatos = tareas.filter(t => t.estado !== 'cancelado');
+            tareasConDatos.forEach(t => {
+                (t.productos || []).forEach(p => {
+                    if (p.es_hallazgo) {
+                        totalHallazgos++;
+                        // Hallazgo aprobado con precio → contribuye a sobra monetaria
+                        if (p.hallazgo_estado === 'aprobado' && p.valor_hallazgo) {
+                            sobraMonetaria += p.valor_hallazgo;
+                        }
+                    } else if (p.conteos && p.conteos.length > 0) {
+                        // Producto normal con conteos registrados
+                        const prod = productosMap.get(p.upc);
+                        const precio = prod?.precio || p.precio || 0;
+                        const diff = (p.total || 0) - (p.existencia || 0);
+                        if (diff < 0) mermaMonetaria += Math.abs(diff) * precio;
+                        else if (diff > 0) sobraMonetaria += diff * precio;
+                    }
+                });
             });
-            const diffTotal = sobraUnidades - mermaUnidades;
-            const precision = lineasTotales > 0 ? Math.round(((lineasTotales - Math.abs(diffTotal)) / lineasTotales) * 100) : 0;
-            
+
             // Valor Total Inventario
             const valorTotal = productos.reduce((acc, p) => acc + ((p.precio || 0) * (p.existencia || 0)), 0);
 
-            document.getElementById('metric-diff').textContent = diffTotal;
-            document.getElementById('metric-precision').textContent = precision + '%';
-            document.getElementById('metric-lineas').textContent = lineasContadas;
-            document.getElementById('metric-merma').textContent = '-₡' + mermaMonetaria.toLocaleString();
-            document.getElementById('mini-tareas').textContent = tareas.filter(t => t.estado !== 'completado').length;
-            document.getElementById('mini-hallazgos').textContent = hallazgos.length;
-            document.getElementById('mini-valor-total').textContent = '₡' + valorTotal.toLocaleString();
+            // Actualizar KPIs financieros
+            const elValor = document.getElementById('metric-valor-inv');
+            if (elValor) elValor.textContent = '₡' + valorTotal.toLocaleString();
+            const elCant = document.getElementById('metric-cant-productos');
+            if (elCant) elCant.textContent = productos.length.toLocaleString();
+            const elMerma = document.getElementById('metric-merma');
+            if (elMerma) elMerma.textContent = '-₡' + mermaMonetaria.toLocaleString();
+            const elSobra = document.getElementById('metric-sobra');
+            if (elSobra) elSobra.textContent = '+₡' + sobraMonetaria.toLocaleString();
+            const elHallazgos = document.getElementById('metric-hallazgos');
+            if (elHallazgos) elHallazgos.textContent = totalHallazgos;
 
-            const auxiliares = await window.AuthModel.getAuxiliares();
-            document.getElementById('mini-auxiliares').textContent = auxiliares.length;
-            document.getElementById('mini-sobra').textContent = '+₡' + sobraMonetaria.toLocaleString();
+            // Renderizar gráficos animados (mantener compatibilidad de parámetros)
+            const conteosFlat = [];
+            tareasConDatos.forEach(t => {
+                (t.productos || []).forEach(p => {
+                    if (!p.es_hallazgo && p.conteos?.length > 0) {
+                        conteosFlat.push({ upc: p.upc, cantidad: p.total || 0 });
+                    }
+                });
+            });
+            this.renderTrendChart(tareasConDatos);
+            this.renderCategoryChart(productos);
+            this.renderPieChart(mermaMonetaria, sobraMonetaria);
+            this.renderBarChart(productos);
+            this.renderDonutChart(productos, conteosFlat);
 
-            const logs = await window.LogController.obtenerTodos();
-            const topLogs = logs.slice(0, 15).map(l => ({
-                hora: new Date(l.timestamp).toLocaleTimeString('es-CR'),
-                usuario: l.usuario_nombre || 'Sistema',
-                accion: l.accion || '-',
-                mensaje: l.mensaje || l.datos_nuevos?.upc || '-'
-            }));
-            document.getElementById('logs-container').innerHTML = this.renderLogsTable(topLogs);
-
-            const ranking = auxiliares.map(a => ({ nombre: a.nombre, precision: Math.floor(Math.random() * 15 + 85), conteos: Math.floor(Math.random() * 50 + 10) })).sort((a, b) => b.precision - a.precision);
-            document.getElementById('ranking-container').innerHTML = this.renderRanking(ranking);
+            // Ranking de auxiliares
+            this.loadRanking();
         } catch (err) { console.error('Error dashboard:', err); }
+    },
+
+    async loadRanking() {
+        const container = document.getElementById('admin-ranking-container');
+        if (!container) return;
+        try {
+            let todos = [];
+
+            // Intentar desde Supabase
+            if (navigator.onLine && window.supabaseClient) {
+                const { data } = await window.supabaseClient
+                    .from('estadisticas_auxiliares')
+                    .select('*')
+                    .order('score_ranking', { ascending: false });
+                if (data?.length) todos = data;
+            }
+
+            // Fallback: Dexie local
+            if (!todos.length) {
+                todos = await window.db.estadisticas_auxiliares
+                    .orderBy('score_ranking').reverse().toArray();
+            }
+
+            if (!todos.length) {
+                container.innerHTML = '<div class="empty-state small"><i class="fas fa-medal"></i><p>Sin datos de ranking aún. Los auxiliares acumulan estadísticas al completar cíclicos.</p></div>';
+                return;
+            }
+
+            const medals = ['🥇', '🥈', '🥉'];
+            const scoreColor = s => s >= 95 ? '#10b981' : s >= 85 ? '#f59e0b' : '#ef4444';
+
+            container.innerHTML = `
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>AUXILIAR</th>
+                            <th>CÍCLICOS</th>
+                            <th>PREC. ABSOLUTA</th>
+                            <th>PREC. NETA</th>
+                            <th>SCORE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${todos.map((a, i) => `
+                            <tr>
+                                <td><strong>${medals[i] || (i + 1)}</strong></td>
+                                <td>${a.auxiliar_nombre || '—'}</td>
+                                <td>${a.total_ciclicos || 0}</td>
+                                <td><span style="color:${scoreColor(a.promedio_pa || 0)};font-weight:700;">${a.promedio_pa || 0}%</span></td>
+                                <td><span style="color:${scoreColor(a.promedio_pn || 0)};font-weight:700;">${a.promedio_pn || 0}%</span></td>
+                                <td><strong style="color:${scoreColor(a.score_ranking || 0)};font-size:15px;">${a.score_ranking || 0}%</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (e) {
+            console.error('Error loadRanking Admin:', e);
+            container.innerHTML = '<div class="empty-state small"><i class="fas fa-exclamation-triangle"></i><p>Error cargando ranking</p></div>';
+        }
+    },
+
+    // ═══ GRÁFICOS SVG ANIMADOS ═══
+    // renderTrendChart — Productos contados por día (últimos 7 días, datos reales)
+    renderTrendChart(tareas = []) {
+        const container = document.getElementById('chart-trend');
+        if (!container) return;
+        const isLight = document.body.classList.contains('light-mode');
+        const w = container.offsetWidth || 600;
+        const h = 200;
+        const txtColor = isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.35)';
+        const gridColor = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.04)';
+
+        // Construir últimos 7 días
+        const days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return {
+                label: d.toLocaleDateString('es-CR', { weekday: 'short' }).toUpperCase().slice(0, 3),
+                date: d.toISOString().slice(0, 10),
+                count: 0
+            };
+        });
+
+        // Contar productos contados por día de finalización de tarea
+        tareas.forEach(t => {
+            const fechaRef = (t.fecha_finalizacion || t.fecha_aprobacion || '').slice(0, 10);
+            if (!fechaRef) return;
+            const day = days.find(d => d.date === fechaRef);
+            if (day) {
+                (t.productos || []).forEach(p => {
+                    if (p.conteos && p.conteos.length > 0) day.count++;
+                });
+            }
+        });
+
+        const data = days.map(d => d.count);
+        const labels = days.map(d => d.label);
+        const totalContados = data.reduce((s, v) => s + v, 0);
+        const max = Math.max(...data, 1);
+        const points = data.map((v, i) => ({ x: (i / (data.length - 1)) * w, y: h - (v / max) * (h * 0.85) }));
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+        const areaPath = linePath + ` L ${w} ${h} L 0 ${h} Z`;
+        const flatLine = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${h}`).join(' ');
+        const flatArea = flatLine + ` L ${w} ${h} L 0 ${h} Z`;
+
+        container.innerHTML = `
+            <svg viewBox="0 0 ${w} ${h + 30}" style="width:100%;height:100%;overflow:visible;">
+                <defs>
+                    <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#C8102E" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#C8102E" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                ${[0, 0.25, 0.5, 0.75, 1].map(f => `<line x1="0" y1="${h - f * h * 0.85}" x2="${w}" y2="${h - f * h * 0.85}" stroke="${gridColor}" stroke-width="1"/>
+                    <text x="0" y="${h - f * h * 0.85 - 3}" fill="${txtColor}" font-size="8">${Math.round(f * max)}</text>`).join('')}
+                <path d="${flatArea}" fill="url(#tg)">
+                    <animate attributeName="d" from="${flatArea}" to="${areaPath}" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                </path>
+                <path d="${flatLine}" fill="none" stroke="#C8102E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <animate attributeName="d" from="${flatLine}" to="${linePath}" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                </path>
+                ${points.map((p, i) => `
+                    <circle cx="${p.x}" cy="${h}" r="5" fill="${isLight ? '#fff' : '#1a1a2e'}" stroke="#C8102E" stroke-width="2.5" opacity="0">
+                        <animate attributeName="cy" from="${h}" to="${p.y}" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="0.8s" fill="freeze"/>
+                    </circle>
+                    ${data[i] > 0 ? `<text x="${p.x}" y="${h}" text-anchor="middle" fill="#C8102E" font-size="9" font-weight="800" opacity="0">
+                        ${data[i]}
+                        <animate attributeName="y" from="${h}" to="${p.y - 10}" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1s" fill="freeze"/>
+                    </text>` : ''}
+                `).join('')}
+                ${labels.map((l, i) => `<text x="${points[i].x}" y="${h + 22}" text-anchor="middle" fill="${txtColor}" font-size="9" font-weight="700" letter-spacing="1">${l}</text>`).join('')}
+                <text x="${w}" y="${h + 22}" text-anchor="end" fill="${txtColor}" font-size="8">Total 7d: ${totalContados} prod.</text>
+            </svg>
+        `;
+    },
+
+    renderCategoryChart(productos = []) {
+        const container = document.getElementById('chart-categories');
+        if (!container) return;
+        const catMap = {};
+        productos.forEach(p => {
+            const cat = (p.categoria || 'OTROS').trim().toUpperCase();
+            if (!catMap[cat]) catMap[cat] = 0;
+            catMap[cat] += (p.precio || 0) * (p.existencia || 0);
+        });
+        const allEntries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+        const total = allEntries.reduce((s, e) => s + e[1], 0) || 1;
+        let entries = allEntries.slice(0, 5);
+        if (entries.length === 0) entries = [['SIN DATOS', 1]];
+        const colors = ['#C8102E', '#10b981', '#3b82f6', '#f59e0b', '#94a3b8'];
+
+        container.innerHTML = entries.map((e, i) => {
+            const pct = Math.round((e[1] / total) * 100);
+            const monto = '₡' + Math.round(e[1]).toLocaleString();
+            return `
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span class="cdc-cat" style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;">${e[0]}</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="cdc-pct" style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);">${pct}%</span>
+                            <span class="cdc-monto" style="font-size:12px;font-weight:800;color:#fff;">${monto}</span>
+                        </div>
+                    </div>
+                    <div class="cdc-bar-bg" style="width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                        <div style="width:0%;height:100%;border-radius:4px;background:${colors[i] || '#C8102E'};transition:width 1.2s cubic-bezier(0.42,0,0.58,1);" class="cat-bar" data-width="${pct}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('') + `
+            <div class="cdc-footer" style="margin-top:20px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
+                <span class="cdc-footer-label" style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;">Valor Total Cargado</span>
+                <span class="cdc-footer-val" style="font-size:14px;font-weight:900;color:#fff;">₡${Math.round(total).toLocaleString()}</span>
+            </div>
+        `;
+        setTimeout(() => {
+            container.querySelectorAll('.cat-bar').forEach(bar => {
+                bar.style.width = bar.dataset.width + '%';
+            });
+        }, 100);
+    },
+
+    // ═══ PIE CHART — Composición Merma ═══
+    renderPieChart(merma = 0, sobra = 0) {
+        const container = document.getElementById('chart-pie');
+        if (!container) return;
+        const isLight = document.body.classList.contains('light-mode');
+        const txtColor = isLight ? '#1a1a1a' : '#fff';
+        const txtDim = isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+        const total = merma + sobra || 1;
+        const mermaPct = merma / total;
+        const sobraPct = sobra / total;
+        const r = 80, cx = 100, cy = 100;
+        // Arc calculations
+        // El donut usa stroke-dasharray con mermaPct/sobraPct directamente
+
+        container.innerHTML = `
+            <svg viewBox="0 0 200 220" style="width:200px;height:220px;">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}" stroke-width="28"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ef4444" stroke-width="28" stroke-dasharray="${mermaPct * 2 * Math.PI * r} ${2 * Math.PI * r}" stroke-dashoffset="0" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" opacity="0">
+                    <animate attributeName="opacity" from="0" to="1" dur="0.5s" fill="freeze"/>
+                    <animate attributeName="stroke-dasharray" from="0 ${2 * Math.PI * r}" to="${mermaPct * 2 * Math.PI * r} ${2 * Math.PI * r}" dur="1s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                </circle>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#10b981" stroke-width="28" stroke-dasharray="${sobraPct * 2 * Math.PI * r} ${2 * Math.PI * r}" stroke-dashoffset="${-mermaPct * 2 * Math.PI * r}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" opacity="0">
+                    <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.5s" fill="freeze"/>
+                    <animate attributeName="stroke-dasharray" from="0 ${2 * Math.PI * r}" to="${sobraPct * 2 * Math.PI * r} ${2 * Math.PI * r}" dur="1s" begin="0.3s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                </circle>
+                <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="${txtColor}" font-size="16" font-weight="900">${Math.round(mermaPct * 100)}%</text>
+                <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="${txtDim}" font-size="8" font-weight="700" letter-spacing="1">FALTANTE</text>
+                <circle cx="30" cy="205" r="5" fill="#ef4444"/>
+                <text x="42" y="209" fill="${txtDim}" font-size="9" font-weight="600">Faltante ₡${merma.toLocaleString()}</text>
+                <circle cx="30" cy="220" r="5" fill="#10b981"/>
+                <text x="42" y="224" fill="${txtDim}" font-size="9" font-weight="600">Sobrante ₡${sobra.toLocaleString()}</text>
+            </svg>
+        `;
+    },
+
+    // ═══ BAR CHART — Top 5 Categorías por cantidad de SKUs (de más a menos productos) ═══
+    renderBarChart(productos = []) {
+        const container = document.getElementById('chart-bars');
+        if (!container) return;
+        const isLight = document.body.classList.contains('light-mode');
+        const txtColor = isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.4)';
+        const valColor = isLight ? '#1a1a1a' : '#fff';
+        const catMap = {};
+        productos.forEach(p => {
+            const cat = (p.categoria || 'OTROS').trim().toUpperCase();
+            if (!catMap[cat]) catMap[cat] = 0;
+            catMap[cat]++; // contar SKUs por categoría, no unidades
+        });
+        const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        if (!entries.length) { container.innerHTML = '<div style="text-align:center;opacity:.4;padding-top:60px;">Sin datos</div>'; return; }
+        const maxVal = Math.max(...entries.map(e => e[1])) || 1;
+        const colors = ['#C8102E', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+        const barH = 30, gap = 12;
+        const w = container.offsetWidth || 400;
+        const totalH = entries.length * (barH + gap);
+
+        container.innerHTML = `
+            <svg viewBox="0 0 ${w} ${totalH}" style="width:100%;height:100%;overflow:visible;">
+                ${entries.map((e, i) => {
+            const barW = (e[1] / maxVal) * (w - 120);
+            const y = i * (barH + gap);
+            return `
+                        <text x="0" y="${y + barH / 2 + 4}" fill="${txtColor}" font-size="9" font-weight="700" letter-spacing="0.5">${e[0].substring(0, 12)}</text>
+                        <rect x="100" y="${y + 4}" width="0" height="${barH - 8}" rx="4" fill="${colors[i]}" opacity="0.85">
+                            <animate attributeName="width" from="0" to="${barW}" dur="1s" fill="freeze" begin="${i * 0.1}s" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                        </rect>
+                        <text x="${100 + barW + 8}" y="${y + barH / 2 + 4}" fill="${valColor}" font-size="11" font-weight="800" opacity="0">
+                            ${e[1]} SKUs
+                            <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="${0.8 + i * 0.1}s" fill="freeze"/>
+                        </text>
+                    `;
+        }).join('')}
+            </svg>
+        `;
+    },
+
+    // ═══ DONUT GAUGE — Cobertura de Conteo ═══
+    renderDonutChart(productos = [], conteos = []) {
+        const container = document.getElementById('chart-donut');
+        if (!container) return;
+        const isLight = document.body.classList.contains('light-mode');
+        const txtColor = isLight ? '#1a1a1a' : '#fff';
+        const txtDim = isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)';
+        const totalProds = productos.length || 1;
+        const contados = new Set(conteos.map(c => c.upc)).size;
+        const pct = Math.min(Math.round((contados / totalProds) * 100), 100);
+        const r = 75, cx = 100, cy = 100;
+        const circ = 2 * Math.PI * r;
+        const fillLen = (pct / 100) * circ;
+        const color = pct > 75 ? '#10b981' : pct > 40 ? '#f59e0b' : '#ef4444';
+
+        container.innerHTML = `
+            <svg viewBox="0 0 200 210" style="width:200px;height:210px;">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}" stroke-width="14"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="0 ${circ}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})">
+                    <animate attributeName="stroke-dasharray" from="0 ${circ}" to="${fillLen} ${circ}" dur="1.5s" fill="freeze" calcMode="spline" keySplines="0.42 0 0.58 1"/>
+                </circle>
+                <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="${txtColor}" font-size="28" font-weight="900">${pct}%</text>
+                <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="${txtDim}" font-size="8" font-weight="700" letter-spacing="1">COBERTURA</text>
+                <text x="${cx}" y="205" text-anchor="middle" fill="${txtDim}" font-size="9" font-weight="600">${contados.toLocaleString()} de ${totalProds.toLocaleString()} productos contados</text>
+            </svg>
+        `;
     },
 
     async limpiarDBLocal() {
@@ -680,6 +1002,23 @@ const AdminView = {
             }
         } catch (e) { console.error('Error sync rechazo admin:', e); }
         await window.db.tareas.update(tarea.id, cambios);
+
+        try {
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_DEVUELTA',
+                registro_id: tarea.id,
+                usuario_id: session.id || null,
+                usuario_nombre: session.name || 'Admin',
+                datos_nuevos: {
+                    categoria: tarea.categoria,
+                    auxiliar_nombre: tarea.auxiliar_nombre,
+                    motivo_rechazo: motivo.trim(),
+                    productos_total: tarea.productos_total || (tarea.productos || []).length
+                }
+            });
+        } catch (e) { console.warn('Error log devolver ciclico:', e); }
+
         window.ZENGO?.toast('Devuelto al Jefe ✓', 'success');
         this.cerrarCiclicoAdmin();
         await this.loadCiclicosConfirmados();
@@ -731,8 +1070,10 @@ const AdminView = {
         // Mapeo de grupos a acciones reales
         let accion = group;
         if (group === 'SESIÓN') accion = ['LOGIN', 'LOGOUT', 'FAILED_LOGIN'];
-        if (group === 'HALLAZGO_REPORTADO') accion = ['HALLAZGO_REPORTADO', 'HALLAZGO_APROBADO', 'HALLAZGO_RECHAZADO'];
-        if (group === 'TAREA_COMPLETADA') accion = ['TAREA_ASIGNADA', 'TAREA_INICIADA', 'TAREA_COMPLETADA', 'TAREA_APROBADA', 'TAREA_RECHAZADA', 'TAREA_DEVUELTA'];
+        if (group === 'HALLAZGO_REPORTADO') accion = ['HALLAZGO_REPORTADO', 'HALLAZGO_APROBADO', 'HALLAZGO_RECHAZADO', 'HALLAZGO_AGREGADO_JEFE'];
+        if (group === 'TAREA_COMPLETADA') accion = ['TAREA_ASIGNADA', 'TAREA_INICIADA', 'TAREA_COMPLETADA', 'TAREA_APROBADA', 'TAREA_RECHAZADA', 'TAREA_DEVUELTA', 'TAREA_CANCELADA'];
+        if (group === 'CONTEOS') accion = ['CONTEO_REGISTRADO', 'CONTEO_EDITADO', 'CONTEO_ELIMINADO', 'CONTEO_AGREGADO_REVISION', 'CONTEO_EDITADO_REVISION', 'CONTEO_ELIMINADO_REVISION'];
+        if (group === 'IMPORT_PRODUCTOS') accion = ['IMPORT_PRODUCTOS', 'EXPORT_CICLICO', 'CICLO_CERRADO'];
         if (group === 'CREATE_USER') accion = ['CREATE_USER', 'UPDATE_USER', 'DELETE_USER'];
 
         const logs = await window.LogController.filtrar({ usuario, accion, texto, fecha });
@@ -996,46 +1337,77 @@ code { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; 
 @media (max-width: 768px) { .sidebar { transform: translateX(-100%); } .sidebar.collapsed { transform: translateX(0); width: 260px; } .main-content { margin-left: 0; } .mobile-menu { display: block; } .metrics-grid { grid-template-columns: 1fr; } .usuarios-stats { grid-template-columns: 1fr; } }
 
 /* ── MODO CLARO EN ADMIN ── */
-body.light-mode .dashboard-wrapper { background: #fdfdfd; color: #1e1e1e; }
+body.light-mode .admin-theme { background: #f5f6fa !important; color: #1e1e1e !important; }
+body.light-mode .dashboard-wrapper { background: #f5f6fa; color: #1e1e1e; }
 body.light-mode .sidebar { background: #ffffff !important; border-right: 1px solid #e0e0e0 !important; }
+body.light-mode .nav-item { color: #5f6368 !important; }
+body.light-mode .nav-item:hover { background: rgba(0,0,0,0.05) !important; color: #1e1e1e !important; }
+body.light-mode .nav-item.active { background: rgba(200,16,46,0.1) !important; color: #C8102E !important; }
+body.light-mode .nav-item.logout { color: #ef4444 !important; }
 body.light-mode .top-header { background: #ffffff !important; border: 1px solid #e0e0e0 !important; color: #1e1e1e !important; }
-body.light-mode .glass, 
-body.light-mode .metric-card, 
-body.light-mode .metric-card-mini, 
-body.light-mode .audit-section, 
-body.light-mode .ranking-section, 
+body.light-mode .glass,
+body.light-mode .metric-card,
+body.light-mode .metric-card-mini,
+body.light-mode .audit-section,
+body.light-mode .ranking-section,
 body.light-mode .usuarios-table,
-body.light-mode .ciclicos-card { 
-    background: #ffffff !important; 
-    border: 1px solid #e0e0e0 !important; 
+body.light-mode .ciclicos-card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
     color: #1e1e1e !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-body.light-mode .mini-value, body.light-mode .metric-value, body.light-mode h1, body.light-mode h2, body.light-mode h3 { color: #1e1e1e !important; }
-body.light-mode .mini-label, body.light-mode .metric-label, body.light-mode .text-dim, body.light-mode .user-role { color: #5f6368 !important; }
-body.light-mode .filter-input { 
-    background: #f1f3f4 !important; 
-    color: #1e1e1e !important; 
-    border: 1px solid #dadce0 !important; 
+body.light-mode .mini-value, body.light-mode .metric-value, body.light-mode .stat-num,
+body.light-mode h1, body.light-mode h2, body.light-mode h3 { color: #1e1e1e !important; }
+body.light-mode .mini-label, body.light-mode .metric-label, body.light-mode .text-dim,
+body.light-mode .user-role, body.light-mode .section-header span { color: #5f6368 !important; }
+body.light-mode .filter-input {
+    background: #f1f3f4 !important;
+    color: #1e1e1e !important;
+    border: 1px solid #dadce0 !important;
 }
 body.light-mode .filter-input option { background: #ffffff !important; color: #1e1e1e !important; }
-body.light-mode .admin-table th { color: #5f6368; border-bottom: 1px solid #e8eaed; }
-body.light-mode .admin-table td { border-bottom: 1px solid #f8f9fa; color: #1e1e1e !important; }
-body.light-mode .audit-table-wrap { background: #fdfdfd !important; }
+body.light-mode .admin-table th { color: #5f6368 !important; border-bottom: 1px solid #e8eaed !important; }
+body.light-mode .admin-table td { border-bottom: 1px solid #f1f3f4 !important; color: #1e1e1e !important; }
+body.light-mode .audit-table-wrap { background: #fafafa !important; }
 body.light-mode .logo { color: #1e1e1e !important; }
 body.light-mode .toggle-btn, body.light-mode .mobile-menu, body.light-mode .user-name { color: #1e1e1e !important; }
-body.light-mode code { background: #f1f3f4 !important; color: #c8102e !important; }
+body.light-mode code { background: #f1f3f4 !important; color: #C8102E !important; }
 body.light-mode .btn-secondary, body.light-mode .btn-action { background: #f1f3f4 !important; color: #1e1e1e !important; border: 1px solid #dadce0 !important; }
 body.light-mode .btn-secondary:hover { background: #e8eaed !important; }
-body.light-mode .rank-item { background: #f8f9fa !important; border: 1px solid #e0e0e0 !important; }
-body.light-mode .modal-content { background: #ffffff !important; color: #1e1e1e !important; box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; }
+body.light-mode .rank-item { background: #f8f9fa !important; border: 1px solid #e8eaed !important; color: #1e1e1e !important; }
+body.light-mode .rank-info strong { color: #1e1e1e !important; }
+body.light-mode .rank-info small { color: #5f6368 !important; }
+body.light-mode .rank-pos { color: #1e1e1e !important; }
+body.light-mode .empty-state { color: #9aa0a6 !important; }
+body.light-mode .modal-overlay { background: rgba(0,0,0,0.4) !important; }
+body.light-mode .modal-content { background: #ffffff !important; color: #1e1e1e !important; box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important; }
 body.light-mode .modal-header, body.light-mode .modal-footer { border-color: #e8eaed !important; }
 body.light-mode .modal-close { color: #5f6368 !important; }
 body.light-mode .form-group label { color: #5f6368 !important; }
 body.light-mode .form-group input, body.light-mode .form-group select { background: #f1f3f4 !important; color: #1e1e1e !important; border-color: #dadce0 !important; }
+body.light-mode .form-group select option { background: #ffffff !important; color: #1e1e1e !important; }
+body.light-mode .consulta-search input { background: #f1f3f4 !important; color: #1e1e1e !important; border-color: #dadce0 !important; }
+body.light-mode .consulta-card { background: #f8f9fa !important; color: #1e1e1e !important; }
+body.light-mode .consulta-grid > div { background: #f1f3f4 !important; }
+body.light-mode .consulta-grid small { color: #5f6368 !important; }
 body.light-mode .audit-json-block { background: #f1f3f4 !important; }
 body.light-mode .audit-json-block strong { color: #5f6368 !important; }
 body.light-mode .audit-json-block pre { color: #1e1e1e !important; }
+body.light-mode .user-card { border-bottom-color: #e8eaed !important; }
+body.light-mode .sidebar-header { border-bottom-color: #e8eaed !important; }
+body.light-mode .sync-badge.online { background: rgba(34,197,94,0.1) !important; }
+/* Charts dark card → light mode */
+body.light-mode .chart-dark-card { background: linear-gradient(135deg,#f0f2ff 0%,#e8ecff 100%) !important; border: 1px solid #dadce0 !important; }
+body.light-mode .chart-dark-card h3,
+body.light-mode .chart-dark-card .cdc-title { color: #1e1e1e !important; }
+body.light-mode .chart-dark-card .cdc-cat { color: rgba(0,0,0,0.6) !important; }
+body.light-mode .chart-dark-card .cdc-pct { color: rgba(0,0,0,0.4) !important; }
+body.light-mode .chart-dark-card .cdc-monto { color: #1e1e1e !important; }
+body.light-mode .chart-dark-card .cdc-bar-bg { background: rgba(0,0,0,0.06) !important; }
+body.light-mode .chart-dark-card .cdc-footer { border-top-color: rgba(0,0,0,0.08) !important; }
+body.light-mode .chart-dark-card .cdc-footer-label { color: rgba(0,0,0,0.45) !important; }
+body.light-mode .chart-dark-card .cdc-footer-val { color: #1e1e1e !important; }
         `;
         document.head.appendChild(style);
     }

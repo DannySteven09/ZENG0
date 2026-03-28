@@ -49,10 +49,20 @@ db.version(1).stores({
 });
 
 // ═══════════════════════════════════════════════════════════════
+// VERSIÓN 2 — Agrega tabla de ranking permanente
+// NUNCA se borra con clearAll — acumula historial por auxiliar
+// ═══════════════════════════════════════════════════════════════
+db.version(2).stores({
+    // Tabla permanente de estadísticas por auxiliar
+    // PK = auxiliar_id (INTEGER, mismo que usuarios.id en Supabase)
+    estadisticas_auxiliares: 'auxiliar_id, score_ranking, total_ciclicos'
+});
+
+// ═══════════════════════════════════════════════════════════════
 // EVENTOS
 // ═══════════════════════════════════════════════════════════════
 db.on('ready', () => {
-    console.log('✓ Dexie: Base de datos lista (ZengoDB_v17 · v1 · UUID)');
+    console.log('✓ Dexie: Base de datos lista (ZengoDB_v17 · v2 · Ranking)');
 });
 
 db.on('blocked', () => {
@@ -71,7 +81,8 @@ db.clearAll = async function () {
     await db.cola_sync.clear();
     await db.usuarios.clear();
     await db.auditoria.clear();
-    console.log('✓ Dexie: Todas las tablas limpiadas');
+    // ⚠ estadisticas_auxiliares NO se limpia — datos permanentes de ranking
+    console.log('✓ Dexie: Tablas limpiadas (ranking preservado)');
 };
 
 db.getStats = async function () {

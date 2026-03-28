@@ -256,6 +256,20 @@ const AuxiliarView = {
             this.tareaActual.estado = 'en_progreso';
             await window.db.tareas.update(miTarea.id, { estado: 'en_progreso' });
             await this.syncTareaToSupabase();
+            try {
+                const session = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+                await window.LogController?.registrar({
+                    tabla: 'tareas',
+                    accion: 'TAREA_INICIADA',
+                    registro_id: miTarea.id,
+                    usuario_id: session.id || null,
+                    usuario_nombre: session.name || 'Auxiliar',
+                    datos_nuevos: {
+                        categoria: miTarea.categoria,
+                        productos_total: miTarea.productos_total || (miTarea.productos || []).length
+                    }
+                });
+            } catch (e) { console.warn('Error log tarea iniciada:', e); }
         }
         document.getElementById('sin-tarea').style.display = 'none';
         document.getElementById('con-tarea').style.display = 'block';
@@ -555,6 +569,8 @@ const AuxiliarView = {
                     upc: nuevo.upc,
                     sku: nuevo.sku || '',
                     descripcion: nuevo.descripcion || '',
+                    cantidad: nuevo.total || 0,
+                    ubicacion: nuevo.conteos?.[0]?.ubicacion || '',
                     estado: nuevo.hallazgo_estado || 'pendiente',
                     total: nuevo.total || 0,
                     conteos: nuevo.conteos || []
@@ -642,10 +658,23 @@ const AuxiliarView = {
         document.getElementById('progress-fill').style.width = pct + '%';
         document.getElementById('kpi-categoria').textContent = this.tareaActual.categoria || '—';
 
-        // Hallazgos pendientes
+        // Hallazgos: mostrar total reportados (nunca baja a cero una vez hay hallazgos)
+        const hTotal = prods.filter(p => p.es_hallazgo).length;
         const hw = document.getElementById('hallazgos-pendientes-label');
-        if (hPend > 0) { hw.style.display = 'inline'; document.getElementById('hallazgos-pend-count').textContent = hPend; }
-        else { hw.style.display = 'none'; }
+        const hwCount = document.getElementById('hallazgos-pend-count');
+        if (hTotal > 0) {
+            hw.style.display = 'inline';
+            if (hPend > 0) {
+                hwCount.textContent = hPend;
+                hw.title = `${hTotal} hallazgo(s) total · ${hPend} pendiente(s)`;
+            } else {
+                hwCount.textContent = hTotal;
+                hw.style.color = 'var(--success, #10b981)';
+                hw.title = `${hTotal} hallazgo(s) resuelto(s)`;
+            }
+        } else {
+            hw.style.display = 'none';
+        }
 
         // KPI Precisión
         const prec = this.calcularPrecision();
@@ -672,65 +701,80 @@ const AuxiliarView = {
     async actualizarRankingUsuario(prec) {
         try {
             const session = JSON.parse(localStorage.getItem('zengo_session') || '{}');
-            const usuario = await window.db.usuarios.get(session.id);
-            if (!usuario) return;
+            const auxId = session.id;
+            if (!auxId) return;
 
-            const hist = usuario.precision_historica || { absoluta_acum: 0, neta_acum: 0, score: 0 };
-            const ciclos = (usuario.ciclicos_completados || 0) + 1;
+            // Leer registro previo de estadisticas_auxiliares
+            const prev = await window.db.estadisticas_auxiliares.get(auxId);
+            const total  = (prev?.total_ciclicos || 0) + 1;
+            const sumaPA = (prev?.suma_pa || 0) + prec.absoluta;
+            const sumaPN = (prev?.suma_pn || 0) + prec.neta;
+            const promPA = parseFloat((sumaPA / total).toFixed(2));
+            const promPN = parseFloat((sumaPN / total).toFixed(2));
+            const score  = parseFloat(((promPA + promPN) / 2).toFixed(2));
 
-            // Promedio acumulado
-            const absAcum = ((hist.absoluta_acum * (ciclos - 1)) + prec.absoluta) / ciclos;
-            const netAcum = ((hist.neta_acum * (ciclos - 1)) + prec.neta) / ciclos;
-            const scoreAcum = Math.round((absAcum * 0.6 + netAcum * 0.4) * 10) / 10;
-
-            const nuevaHist = {
-                absoluta_acum: Math.round(absAcum * 10) / 10,
-                neta_acum: Math.round(netAcum * 10) / 10,
-                score: scoreAcum
+            const row = {
+                auxiliar_id:          auxId,
+                auxiliar_nombre:      session.name || session.nombre || 'Auxiliar',
+                total_ciclicos:       total,
+                suma_pa:              sumaPA,
+                suma_pn:              sumaPN,
+                promedio_pa:          promPA,
+                promedio_pn:          promPN,
+                score_ranking:        score,
+                ultima_actualizacion: new Date().toISOString()
             };
 
             // Guardar en Dexie
-            await window.db.usuarios.update(session.id, {
-                precision_historica: nuevaHist,
-                ciclicos_completados: ciclos
-            });
+            await window.db.estadisticas_auxiliares.put(row);
 
-            // Guardar en Supabase
+            // Sincronizar con Supabase
             try {
                 if (navigator.onLine && window.supabaseClient) {
-                    await window.supabaseClient.from('usuarios').update({
-                        precision_historica: nuevaHist,
-                        ciclicos_completados: ciclos
-                    }).eq('id', session.id);
-                } else {
-                    await window.SyncManager?.addToQueue('usuarios', 'update', {
-                        id: session.id,
-                        changes: { precision_historica: nuevaHist, ciclicos_completados: ciclos }
-                    });
+                    await window.supabaseClient
+                        .from('estadisticas_auxiliares')
+                        .upsert(row, { onConflict: 'auxiliar_id' });
                 }
             } catch (e) { console.warn('Sync ranking falló:', e); }
+
+            console.log(`✓ Ranking actualizado: score=${score}% (ciclo ${total})`);
         } catch (e) { console.warn('Error actualizando ranking:', e); }
     },
 
     async cargarRanking() {
+        const posEl   = document.getElementById('kpi-ranking-pos');
+        const scoreEl = document.getElementById('kpi-ranking-score');
+        if (!posEl || !scoreEl) return;
         try {
             const session = JSON.parse(localStorage.getItem('zengo_session') || '{}');
-            const auxiliares = await window.AuthModel?.getAuxiliares() || [];
-            const conScore = auxiliares.filter(a => a.precision_historica && a.ciclicos_completados > 0)
-                .sort((a, b) => (b.precision_historica?.score || 0) - (a.precision_historica?.score || 0));
-            const miPos = conScore.findIndex(a => a.id === session.id);
-            const posEl = document.getElementById('kpi-ranking-pos');
-            const scoreEl = document.getElementById('kpi-ranking-score');
+            let todos = [];
+
+            // Intentar desde Supabase primero
+            if (navigator.onLine && window.supabaseClient) {
+                const { data } = await window.supabaseClient
+                    .from('estadisticas_auxiliares')
+                    .select('auxiliar_id, score_ranking')
+                    .order('score_ranking', { ascending: false });
+                if (data?.length) todos = data;
+            }
+
+            // Fallback: Dexie local
+            if (!todos.length) {
+                todos = await window.db.estadisticas_auxiliares
+                    .orderBy('score_ranking').reverse().toArray();
+            }
+
+            const miPos = todos.findIndex(a => a.auxiliar_id === session.id);
             if (miPos !== -1) {
-                posEl.textContent = '#' + (miPos + 1);
-                scoreEl.textContent = 'Score: ' + (conScore[miPos].precision_historica?.score || 0) + '%';
+                posEl.textContent   = '#' + (miPos + 1);
+                scoreEl.textContent = 'Score: ' + todos[miPos].score_ranking + '%';
             } else {
-                posEl.textContent = '—';
-                scoreEl.textContent = 'Sin datos';
+                posEl.textContent   = '—';
+                scoreEl.textContent = 'Sin ciclos aún';
             }
         } catch (e) {
-            document.getElementById('kpi-ranking-pos').textContent = '—';
-            document.getElementById('kpi-ranking-score').textContent = 'Sin datos';
+            posEl.textContent   = '—';
+            scoreEl.textContent = 'Sin datos';
         }
     },
 
@@ -757,6 +801,22 @@ const AuxiliarView = {
 
         // Actualizar ranking del auxiliar
         await this.actualizarRankingUsuario(prec);
+
+        try {
+            const session = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_COMPLETADA',
+                registro_id: this.tareaActual.id,
+                usuario_id: session.id || null,
+                usuario_nombre: session.name || 'Auxiliar',
+                datos_nuevos: {
+                    categoria: this.tareaActual.categoria,
+                    productos_contados: this.tareaActual.productos_contados || 0,
+                    productos_total: this.tareaActual.productos_total || (this.tareaActual.productos || []).length
+                }
+            });
+        } catch (e) { console.warn('Error log tarea completada:', e); }
 
         window.ZENGO?.toast(synced ? 'Cíclico finalizado y enviado al Jefe ✓' : 'Finalizado (pendiente sincronizar)', synced ? 'success' : 'warning');
 

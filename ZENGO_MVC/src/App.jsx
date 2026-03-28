@@ -10,6 +10,7 @@ import LoginView from './views/pages/LoginView';
 import AuxiliarDashboard from './views/pages/dashboards/AuxiliarDashboard';
 import JefeDashboard from './views/pages/dashboards/JefeDashboard';
 import AdminDashboard from './views/pages/dashboards/AdminDashboard';
+import AuditView from './views/pages/dashboards/AuditView'; // New view
 import DashboardView from './views/pages/dashboards/AuxiliarDashboard'; // Fallback
 
 // Wrapper component to use hooks inside AuthProvider
@@ -70,7 +71,7 @@ const AppContent = () => {
                 </motion.div>
             )}
 
-            {(currentView === "dashboard" || isAuthenticated) && (
+            {(currentView === "dashboard" || (isAuthenticated && currentView === "dashboard")) && (
                 <motion.div
                     key="dashboard"
                     initial={{ opacity: 0, x: 100 }}
@@ -78,6 +79,17 @@ const AppContent = () => {
                     exit={{ opacity: 0, x: -100 }}
                 >
                     {getDashboardComponent()}
+                </motion.div>
+            )}
+
+            {currentView === "audit" && (
+                <motion.div
+                    key="audit"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                >
+                    <AuditView onNavigate={navigateTo} userName={user?.user_metadata?.full_name || user?.email} />
                 </motion.div>
             )}
 

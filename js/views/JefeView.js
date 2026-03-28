@@ -25,8 +25,7 @@ const JefeView = {
                     <div class="user-info"><span class="user-name">${session.name || 'Jefe'}</span><span class="user-role">JEFATURA</span></div>
                 </div>
                 <nav class="sidebar-nav">
-                    <a href="#" class="nav-item active" data-section="mando" onclick="JefeView.showSection('mando')"><i class="fas fa-satellite-dish"></i><span>Mando Central</span></a>
-                    <a href="#" class="nav-item" data-section="asignar" onclick="JefeView.showSection('asignar')"><i class="fas fa-tasks"></i><span>Asignar Tareas</span></a>
+                    <a href="#" class="nav-item active" data-section="mando" onclick="JefeView.showSection('mando')"><i class="fas fa-satellite-dish"></i><span>Consola Central</span></a>
                     <a href="#" class="nav-item" data-section="hallazgos" onclick="JefeView.showSection('hallazgos')"><i class="fas fa-exclamation-triangle"></i><span>Hallazgos</span><span class="badge-alert" id="hallazgos-count">0</span></a>
                     <a href="#" class="nav-item" data-section="revisar" onclick="JefeView.showSection('revisar')"><i class="fas fa-clipboard-check"></i><span>Revisar Ciclicos</span></a>
                     <a href="#" class="nav-item" data-section="devueltos" onclick="JefeView.showSection('devueltos')"><i class="fas fa-undo"></i><span>Devueltos</span><span class="badge-alert" id="devueltos-jefe-count" style="display:none;">0</span></a>
@@ -44,11 +43,46 @@ const JefeView = {
 
                 <!-- MANDO CENTRAL -->
                 <div id="section-mando" class="section-content">
-                    <section class="quick-metrics">
-                        <div class="qm-card glass"><div class="qm-icon purple"><i class="fas fa-layer-group"></i></div><div class="qm-data"><span class="qm-value" id="total-categorias">0</span><span class="qm-label">Categorias</span></div></div>
-                        <div class="qm-card glass"><div class="qm-icon blue"><i class="fas fa-clipboard-list"></i></div><div class="qm-data"><span class="qm-value" id="tareas-activas">0</span><span class="qm-label">Tareas Activas</span></div></div>
-                        <div class="qm-card glass"><div class="qm-icon orange"><i class="fas fa-exclamation-circle"></i></div><div class="qm-data"><span class="qm-value" id="hallazgos-pendientes">0</span><span class="qm-label">Hallazgos</span></div></div>
-                        <div class="qm-card glass"><div class="qm-icon green"><i class="fas fa-users"></i></div><div class="qm-data"><span class="qm-value" id="auxiliares-count">0</span><span class="qm-label">Auxiliares</span></div></div>
+                    <section class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-boxes" style="color:#7C3AED;"></i></div>
+                            <span class="metric-value" id="jefe-existencia-total">0</span>
+                            <span class="metric-label">Existencia Total</span>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-arrow-up" style="color:#10b981;"></i></div>
+                            <span class="metric-value text-success" id="jefe-diff-positivo">0</span>
+                            <span class="metric-label">Diferencia (+)</span>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-arrow-down" style="color:#ef4444;"></i></div>
+                            <span class="metric-value text-error" id="jefe-diff-negativo">0</span>
+                            <span class="metric-label">Diferencia (-)</span>
+                        </div>
+                        <div class="metric-card glass">
+                            <div class="metric-header"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i></div>
+                            <span class="metric-value" id="hallazgos-pendientes" style="color:#f59e0b;">0</span>
+                            <span class="metric-label">Hallazgos</span>
+                        </div>
+                    </section>
+
+                    <section class="ranking-section glass">
+                        <div class="section-header">
+                            <h3><i class="fas fa-medal"></i> Ranking de Precisión</h3>
+                            <button class="btn-refresh" onclick="JefeView.loadRanking()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <div id="jefe-ranking-wrap">
+                            <div class="empty-state"><i class="fas fa-medal"></i><p>Cargando ranking...</p></div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <div class="section-header"><h2><i class="fas fa-tasks"></i> Asignar Categoria a Auxiliar</h2></div>
+                        <div class="asignar-grid">
+                            <div class="asignar-card glass"><h4><i class="fas fa-folder"></i> 1. Categoria</h4><div class="categorias-asignar" id="categorias-disponibles"></div></div>
+                            <div class="asignar-card glass"><h4><i class="fas fa-user"></i> 2. Auxiliar</h4><div class="auxiliares-list" id="auxiliares-disponibles"></div></div>
+                            <div class="asignar-card glass wide"><h4><i class="fas fa-clipboard-check"></i> 3. Confirmar</h4><div class="asignar-resumen" id="asignar-resumen"><div class="resumen-empty"><p>Selecciona categoria y auxiliar</p></div></div><div class="asignar-actions"><button class="btn-secondary" onclick="JefeView.limpiarAsignacion()"><i class="fas fa-eraser"></i> Limpiar</button><button class="btn-primary" id="btn-confirmar" onclick="JefeView.confirmarAsignacion()" disabled><i class="fas fa-paper-plane"></i> Asignar</button></div></div>
+                        </div>
                     </section>
                     <section class="monitor-section">
                         <div class="section-header">
@@ -59,16 +93,6 @@ const JefeView = {
                             <div class="empty-state"><i class="fas fa-satellite-dish"></i><p>Cargando...</p></div>
                         </div>
                     </section>
-                </div>
-
-                <!-- ASIGNAR -->
-                <div id="section-asignar" class="section-content" style="display:none;">
-                    <section><div class="section-header"><h2><i class="fas fa-tasks"></i> Asignar Categoria a Auxiliar</h2></div>
-                    <div class="asignar-grid">
-                        <div class="asignar-card glass"><h4><i class="fas fa-folder"></i> 1. Categoria</h4><div class="categorias-asignar" id="categorias-disponibles"></div></div>
-                        <div class="asignar-card glass"><h4><i class="fas fa-user"></i> 2. Auxiliar</h4><div class="auxiliares-list" id="auxiliares-disponibles"></div></div>
-                        <div class="asignar-card glass wide"><h4><i class="fas fa-clipboard-check"></i> 3. Confirmar</h4><div class="asignar-resumen" id="asignar-resumen"><div class="resumen-empty"><p>Selecciona categoria y auxiliar</p></div></div><div class="asignar-actions"><button class="btn-secondary" onclick="JefeView.limpiarAsignacion()"><i class="fas fa-eraser"></i> Limpiar</button><button class="btn-primary" id="btn-confirmar" onclick="JefeView.confirmarAsignacion()" disabled><i class="fas fa-paper-plane"></i> Asignar</button></div></div>
-                    </div></section>
                 </div>
 
                 <!-- HALLAZGOS -->
@@ -206,6 +230,8 @@ const JefeView = {
         await this.loadAuxiliares();
         await this.loadCiclicosParaRevisar();
         await this.loadMonitorMando();
+        await this.loadExistenciaMetrics();
+        await this.loadRanking();
     },
 
     async refreshAll() {
@@ -234,7 +260,7 @@ const JefeView = {
                 categorias.get(cat).existencia += p.existencia || 0;
             });
             const arr = Array.from(categorias.values()).sort((a, b) => b.productos.length - a.productos.length);
-            document.getElementById('total-categorias').textContent = arr.length;
+            const elCat = document.getElementById('total-categorias'); if (elCat) elCat.textContent = arr.length;
 
             const activas = await this.getTareasActivas();
             const asignadas = new Set(activas.map(t => t.categoria));
@@ -256,7 +282,7 @@ const JefeView = {
     },
     async loadAuxiliares() {
         const auxs = await window.AuthModel?.getAuxiliares() || [];
-        document.getElementById('auxiliares-count').textContent = auxs.length;
+        const elAux = document.getElementById('auxiliares-count'); if (elAux) elAux.textContent = auxs.length;
         const c = document.getElementById('auxiliares-disponibles');
         c.innerHTML = auxs.length
             ? auxs.map(a => `<div class="auxiliar-item" data-id="${a.id}" onclick="JefeView.selectAuxiliar(${a.id}, '${a.nombre}')"><div class="aux-avatar">${a.nombre.charAt(0)}</div><div class="aux-info"><strong>${a.nombre} ${a.apellido || ''}</strong><small>${a.email}</small></div><i class="fas fa-chevron-right"></i></div>`).join('')
@@ -265,38 +291,117 @@ const JefeView = {
 
     async loadTareas() {
         const activas = await this.getTareasActivas();
-        const counter = document.getElementById('tareas-activas');
+        const counter = document.getElementById('ciclicos-activos');
         if (counter) counter.textContent = activas.length;
+    },
+
+    async loadExistenciaMetrics() {
+        try {
+            const productos = await window.db.productos.toArray();
+            // Incluir TODAS las tareas (no sólo activas) excepto canceladas
+            // para que los KPIs acumulen diferencias de cíclicos entregados/aprobados
+            const todasTareas = (await window.db.tareas.toArray()).filter(t => t.estado !== 'cancelado');
+            // Existencia total
+            const existTotal = productos.reduce((s, p) => s + (p.existencia || 0), 0);
+            const elExist = document.getElementById('jefe-existencia-total');
+            if (elExist) elExist.textContent = existTotal.toLocaleString();
+            // Diferencias positivas y negativas desde conteos de tareas
+            let diffPos = 0, diffNeg = 0;
+            todasTareas.forEach(t => {
+                (t.productos || []).forEach(p => {
+                    if (p.conteos && p.conteos.length > 0 && !p.es_hallazgo) {
+                        const dif = (p.total || 0) - (p.existencia || 0);
+                        if (dif > 0) diffPos += dif;
+                        else if (dif < 0) diffNeg += Math.abs(dif);
+                    }
+                });
+            });
+            const elPos = document.getElementById('jefe-diff-positivo');
+            if (elPos) elPos.textContent = diffPos.toLocaleString();
+            const elNeg = document.getElementById('jefe-diff-negativo');
+            if (elNeg) elNeg.textContent = diffNeg.toLocaleString();
+        } catch (e) { console.error('loadExistenciaMetrics:', e); }
     },
 
     // ═══ HALLAZGOS (desde JSON de tareas) ═══
     async loadHallazgos() {
-        const activas = await this.getTareasActivas();
+        const todasTareas = (await window.db.tareas.toArray()).filter(t => t.estado !== 'cancelado');
+        // Para la lista de pendientes: solo tareas donde el jefe aún puede actuar
+        const estadosAccionables = ['en_progreso', 'finalizado_auxiliar', 'devuelto_admin', 'devuelto_jefe'];
         const pend = [];
-        activas.forEach(t => {
+        let totalHallazgos = 0;
+        todasTareas.forEach(t => {
             (t.productos || []).forEach((p, i) => {
-                if (p.es_hallazgo && p.hallazgo_estado === 'pendiente')
-                    pend.push({ ...p, tarea_id: t.id, tarea_cat: t.categoria, idx: i });
+                if (p.es_hallazgo) {
+                    totalHallazgos++; // KPI acumulado: nunca baja
+                    if (p.hallazgo_estado === 'pendiente' && estadosAccionables.includes(t.estado))
+                        pend.push({ ...p, tarea_id: t.id, tarea_cat: t.categoria, idx: i, auxiliar_nombre: t.auxiliar_nombre });
+                }
             });
         });
-        document.getElementById('hallazgos-count').textContent = pend.length;
-        document.getElementById('hallazgos-pendientes').textContent = pend.length;
+        // Badge sidebar = pendientes (atención); KPI = total acumulado (nunca baja)
+        const badgeEl = document.getElementById('hallazgos-count');
+        if (badgeEl) badgeEl.textContent = pend.length;
+        const kpiEl = document.getElementById('hallazgos-pendientes');
+        if (kpiEl) kpiEl.textContent = totalHallazgos;
         const c = document.getElementById('hallazgos-list');
         c.innerHTML = pend.length
             ? pend.map(h => `<div class="hallazgo-row"><div class="hallazgo-info"><code>${h.upc}</code><span>${h.descripcion || 'Sin desc'}</span><small>${h.tarea_cat} — <span class="pill-badge celeste">${h.hallazgo_reportado_por || 'Aux'}</span></small></div><div class="hallazgo-actions"><button class="btn-approve" onclick="JefeView.aprobarHallazgo('${h.tarea_id}',${h.idx})"><i class="fas fa-check"></i> Aprobar</button><button class="btn-reject" onclick="JefeView.rechazarHallazgo('${h.tarea_id}',${h.idx})"><i class="fas fa-times"></i> Rechazar</button></div></div>`).join('')
             : '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Sin hallazgos pendientes</p></div>';
     },
 
+    async pedirPrecioHallazgo(descripcion, cantidad) {
+        return new Promise(resolve => {
+            // Crear modal de precio inline
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div class="modal-box glass" style="max-width:400px;width:90%;padding:24px;border-radius:16px;">
+                    <h3 style="margin:0 0 8px;color:#7C3AED;"><i class="fas fa-tag"></i> Precio del Hallazgo</h3>
+                    <p style="margin:0 0 16px;font-size:13px;opacity:0.8;">${descripcion || 'Producto'} · ${cantidad} ud(s)</p>
+                    <label style="display:block;font-size:12px;margin-bottom:6px;opacity:0.7;">Precio unitario (₡)</label>
+                    <input id="hallazgo-precio-input" type="number" min="0" step="1" placeholder="Ej: 15000"
+                        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(124,58,237,0.4);background:rgba(255,255,255,0.08);color:inherit;font-size:16px;box-sizing:border-box;">
+                    <div style="display:flex;gap:10px;margin-top:16px;">
+                        <button id="hallazgo-precio-cancel" class="btn-secondary" style="flex:1;">Cancelar</button>
+                        <button id="hallazgo-precio-ok" class="btn-primary" style="flex:2;background:#7C3AED;"><i class="fas fa-check"></i> Aprobar</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            const input = overlay.querySelector('#hallazgo-precio-input');
+            input.focus();
+            overlay.querySelector('#hallazgo-precio-cancel').onclick = () => { overlay.remove(); resolve(null); };
+            overlay.querySelector('#hallazgo-precio-ok').onclick = () => {
+                const val = parseFloat(input.value) || 0;
+                overlay.remove();
+                resolve(val);
+            };
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { const val = parseFloat(input.value) || 0; overlay.remove(); resolve(val); }
+                if (e.key === 'Escape') { overlay.remove(); resolve(null); }
+            });
+        });
+    },
+
     async aprobarHallazgo(tid, pi) {
-        const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
         const t = await window.db.tareas.get(tid);
         if (!t) return;
+        const hallazgo = t.productos[pi];
+        const cantidad = hallazgo.total || hallazgo.cantidad || 0;
 
-        const hallazgoAntes = JSON.parse(JSON.stringify(t.productos[pi]));
+        // Pedir precio antes de aprobar
+        const precio = await this.pedirPrecioHallazgo(hallazgo.descripcion || hallazgo.upc, cantidad);
+        if (precio === null) return; // usuario canceló
+
+        const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+        const hallazgoAntes = JSON.parse(JSON.stringify(hallazgo));
 
         t.productos[pi].hallazgo_estado = 'aprobado';
         t.productos[pi].hallazgo_aprobado_por = s.name;
         t.productos[pi].hallazgo_aprobado_color = 'purpura';
+        t.productos[pi].precio_hallazgo = precio;
+        t.productos[pi].valor_hallazgo = precio * cantidad; // para KPI Admin
 
         await window.db.tareas.put(t);
         await this.syncTareaToSupabase(t);
@@ -319,14 +424,17 @@ const JefeView = {
                     descripcion: t.productos[pi].descripcion,
                     cantidad: t.productos[pi].total || t.productos[pi].cantidad || 0,
                     estado: t.productos[pi].hallazgo_estado,
-                    aprobado_por: t.productos[pi].hallazgo_aprobado_por
+                    aprobado_por: t.productos[pi].hallazgo_aprobado_por,
+                    precio_hallazgo: precio,
+                    valor_hallazgo: t.productos[pi].valor_hallazgo,
+                    auxiliar_nombre: t.auxiliar_nombre || t.productos[pi].hallazgo_reportado_por || 'auxiliar'
                 }
             });
         } catch (err) {
             console.warn('Error log aprobacion hallazgo:', err);
         }
 
-        window.ZENGO?.toast('Hallazgo aprobado ✓', 'success');
+        window.ZENGO?.toast(`Hallazgo aprobado ✓  ·  ₡${(precio * cantidad).toLocaleString()}`, 'success');
         await this.loadDashboardData();
     },
 
@@ -362,7 +470,8 @@ const JefeView = {
                     descripcion: t.productos[pi].descripcion,
                     cantidad: t.productos[pi].total || t.productos[pi].cantidad || 0,
                     estado: t.productos[pi].hallazgo_estado,
-                    rechazado_por: t.productos[pi].hallazgo_rechazado_por
+                    rechazado_por: t.productos[pi].hallazgo_rechazado_por,
+                    auxiliar_nombre: t.auxiliar_nombre || t.productos[pi].hallazgo_reportado_por || 'auxiliar'
                 }
             });
         } catch (err) {
@@ -450,6 +559,23 @@ const JefeView = {
             }
         } catch (e) { }
         await window.db.tareas.put(tarea);
+
+        try {
+            const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_ASIGNADA',
+                registro_id: tarea.id,
+                usuario_id: s.id || null,
+                usuario_nombre: s.name || 'Jefe',
+                datos_nuevos: {
+                    categoria: categoriaNombre,
+                    auxiliar_nombre: auxiliarNombre,
+                    productos_total: productos.length
+                }
+            });
+        } catch (e) { console.warn('Error log asignacion:', e); }
+
         window.ZENGO?.toast(`✓ ${categoriaNombre} → ${auxiliarNombre}`, ok ? 'success' : 'warning');
         this.limpiarAsignacion();
         await this.loadDashboardData();
@@ -464,8 +590,26 @@ const JefeView = {
 
     async cancelarTarea(tid) {
         if (!await window.ZENGO?.confirm('¿Cancelar esta tarea?', 'Confirmar')) return;
+        const tarea = await window.db.tareas.get(tid);
         try { if (navigator.onLine && window.supabaseClient) await window.supabaseClient.from('tareas').update({ estado: 'cancelado' }).eq('id', tid); } catch (e) { }
         await window.db.tareas.update(tid, { estado: 'cancelado' });
+
+        try {
+            const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_CANCELADA',
+                registro_id: tid,
+                usuario_id: s.id || null,
+                usuario_nombre: s.name || 'Jefe',
+                datos_nuevos: {
+                    categoria: tarea?.categoria || '—',
+                    auxiliar_nombre: tarea?.auxiliar_nombre || '—',
+                    estado_anterior: tarea?.estado || '—'
+                }
+            });
+        } catch (e) { console.warn('Error log cancelar tarea:', e); }
+
         window.ZENGO?.toast('Cancelada', 'success');
         await this.loadDashboardData();
     },
@@ -776,10 +920,90 @@ const JefeView = {
         await window.LocationModel.guardarUbicacionesTarea(this.revisionActual);
         await window.db.tareas.put(this.revisionActual);
         await this.syncTareaToSupabase(this.revisionActual);
+        // Actualizar ranking del auxiliar (datos permanentes)
+        await this.calcularYGuardarEstadisticas(this.revisionActual);
+
+        try {
+            const tEntregada = this.revisionActual;
+            const contados = (tEntregada.productos || []).filter(p => p.conteos && p.conteos.length > 0).length;
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_APROBADA',
+                registro_id: tEntregada.id,
+                usuario_id: s.id || null,
+                usuario_nombre: s.name || 'Jefe',
+                datos_nuevos: {
+                    categoria: tEntregada.categoria,
+                    auxiliar_nombre: tEntregada.auxiliar_nombre,
+                    productos_contados: contados,
+                    productos_total: tEntregada.productos_total || (tEntregada.productos || []).length
+                }
+            });
+        } catch (e) { console.warn('Error log entrega admin:', e); }
+
         window.ZENGO?.toast('Entregado a Administracion ✓', 'success');
         this.revisionActual = null;
         this.showSection('mando');
         await this.loadDashboardData();
+    },
+
+    // ═══ RANKING — Cálculo de Precisión Absoluta y Neta ═══
+    async calcularYGuardarEstadisticas(tarea) {
+        try {
+            let totalExist = 0, totalDiff = 0, totalFalt = 0;
+
+            (tarea.productos || []).forEach(p => {
+                if (p.conteos && p.conteos.length > 0) {
+                    const exist = p.existencia || 0;
+                    const dif = (p.total || 0) - exist;
+                    totalExist += exist;
+                    totalDiff += Math.abs(dif);
+                    if (dif < 0) totalFalt += Math.abs(dif);
+                }
+            });
+
+            // PA: penaliza sobrantes y faltantes · PN: solo penaliza faltantes (merma)
+            const pa = totalExist > 0 ? Math.max(0, (1 - totalDiff / totalExist) * 100) : 100;
+            const pn = totalExist > 0 ? Math.max(0, (1 - totalFalt / totalExist) * 100) : 100;
+
+            const auxId = tarea.auxiliar_id;
+            const auxNombre = tarea.auxiliar_nombre || 'Desconocido';
+
+            // Leer registro existente (promedio acumulado)
+            const prev = await window.db.estadisticas_auxiliares.get(auxId);
+            const total = (prev?.total_ciclicos || 0) + 1;
+            const sumaPA = (prev?.suma_pa || 0) + pa;
+            const sumaPN = (prev?.suma_pn || 0) + pn;
+            const promPA = parseFloat((sumaPA / total).toFixed(2));
+            const promPN = parseFloat((sumaPN / total).toFixed(2));
+            const score  = parseFloat(((promPA + promPN) / 2).toFixed(2));
+
+            const stats = {
+                auxiliar_id: auxId,
+                auxiliar_nombre: auxNombre,
+                total_ciclicos: total,
+                suma_pa: parseFloat(sumaPA.toFixed(4)),
+                suma_pn: parseFloat(sumaPN.toFixed(4)),
+                promedio_pa: promPA,
+                promedio_pn: promPN,
+                score_ranking: score,
+                ultima_actualizacion: new Date().toISOString()
+            };
+
+            // Guardar en Dexie (permanente)
+            await window.db.estadisticas_auxiliares.put(stats);
+
+            // Sincronizar a Supabase
+            if (navigator.onLine && window.supabaseClient) {
+                await window.supabaseClient
+                    .from('estadisticas_auxiliares')
+                    .upsert(stats, { onConflict: 'auxiliar_id' });
+            }
+
+            console.log(`✓ Ranking actualizado: ${auxNombre} | PA:${promPA}% PN:${promPN}% Score:${score}%`);
+        } catch (e) {
+            console.error('Error calcularYGuardarEstadisticas:', e);
+        }
     },
 
     // ═══ DEVUELTOS POR ADMIN ═══
@@ -820,6 +1044,23 @@ const JefeView = {
         tarea.fecha_devuelto_jefe = new Date().toISOString();
         await window.db.tareas.put(tarea);
         await this.syncTareaToSupabase(tarea);
+
+        try {
+            await window.LogController?.registrar({
+                tabla: 'tareas',
+                accion: 'TAREA_RECHAZADA',
+                registro_id: tarea.id,
+                usuario_id: session.id || null,
+                usuario_nombre: session.name || 'Jefe',
+                datos_nuevos: {
+                    categoria: tarea.categoria,
+                    auxiliar_nombre: tarea.auxiliar_nombre,
+                    motivo_rechazo: motivo.trim(),
+                    productos_total: tarea.productos_total || (tarea.productos || []).length
+                }
+            });
+        } catch (e) { console.warn('Error log devolver auxiliar:', e); }
+
         window.ZENGO?.toast('Devuelto al Auxiliar ✓', 'success');
         await this.loadDevueltosJefe();
     },
@@ -872,8 +1113,7 @@ const JefeView = {
         document.getElementById(`section-${id}`).style.display = 'block';
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector(`[data-section="${id}"]`)?.classList.add('active');
-        if (id === 'mando') this.loadMonitorMando();
-        if (id === 'asignar') { this.loadCategorias(); this.loadTareas(); }
+        if (id === 'mando') { this.loadMonitorMando(); this.loadRanking(); }
         if (id === 'consulta') this._iniciarScannerConsulta();
         if (id === 'hallazgos') this.loadHallazgos();
         if (id === 'revisar') this.loadCiclicosParaRevisar();
@@ -1005,6 +1245,55 @@ const JefeView = {
         </div>`;
     },
 
+    // ═══ RANKING ═══
+    async loadRanking() {
+        const el = document.getElementById('jefe-ranking-wrap');
+        if (!el) return;
+
+        // Intentar sync desde Supabase primero
+        try {
+            if (navigator.onLine && window.supabaseClient) {
+                const { data } = await window.supabaseClient
+                    .from('estadisticas_auxiliares')
+                    .select('*')
+                    .order('score_ranking', { ascending: false });
+                if (data && data.length) {
+                    for (const row of data) await window.db.estadisticas_auxiliares.put(row);
+                }
+            }
+        } catch (e) { /* offline — usa Dexie */ }
+
+        const stats = await window.db.estadisticas_auxiliares
+            .orderBy('score_ranking').reverse().toArray();
+
+        if (!stats.length) {
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-medal"></i><p>Sin datos aún — el ranking se genera al entregar cíclicos</p></div>';
+            return;
+        }
+
+        const medals = ['🥇', '🥈', '🥉'];
+        el.innerHTML = `
+        <table class="rk-table">
+            <thead><tr>
+                <th>#</th><th>Auxiliar</th><th>Cíclicos</th>
+                <th>Prec. Absoluta</th><th>Prec. Neta</th><th>Score</th>
+            </tr></thead>
+            <tbody>
+                ${stats.map((s, i) => {
+                    const scoreColor = s.score_ranking >= 95 ? '#22c55e' : s.score_ranking >= 85 ? '#f59e0b' : '#ef4444';
+                    return `<tr class="${i < 3 ? 'rk-top' : ''}">
+                        <td class="rk-pos">${medals[i] || (i + 1)}</td>
+                        <td class="rk-name"><div class="rk-avatar">${(s.auxiliar_nombre || 'A').charAt(0).toUpperCase()}</div>${s.auxiliar_nombre || '—'}</td>
+                        <td class="rk-num">${s.total_ciclicos}</td>
+                        <td class="rk-num">${s.promedio_pa?.toFixed(1)}%</td>
+                        <td class="rk-num">${s.promedio_pn?.toFixed(1)}%</td>
+                        <td class="rk-score" style="color:${scoreColor}">${s.score_ranking?.toFixed(1)}%</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+    },
+
     // ═══ ESTILOS (inyectados una sola vez) ═══
     injectStyles() {
         if (document.getElementById('jefe-monitor-styles')) return;
@@ -1063,6 +1352,22 @@ body.light-mode .mc-stat-lbl { color: rgba(0,0,0,0.4); }
 body.light-mode .mc-crono { color: rgba(0,0,0,0.6); }
 body.light-mode .mc-fecha { color: rgba(0,0,0,0.3); }
 body.light-mode .mc-progress-bg { background: rgba(0,0,0,0.1); }
+/* ── Ranking ── */
+.ranking-section { margin-top: 24px; padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+.rk-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.rk-table thead tr { border-bottom: 1px solid rgba(255,255,255,0.08); }
+.rk-table th { padding: 10px 12px; text-align: left; font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
+.rk-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rk-top td { background: rgba(124,58,237,0.06); }
+.rk-pos { font-size: 1.1rem; text-align: center; width: 40px; }
+.rk-name { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.rk-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,#7C3AED,#a78bfa); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.rk-num { color: rgba(255,255,255,0.7); text-align: center; }
+.rk-score { font-weight: 700; font-size: 1rem; text-align: center; }
+body.light-mode .ranking-section { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.07); }
+body.light-mode .rk-table th { color: rgba(0,0,0,0.4); }
+body.light-mode .rk-table td { border-bottom-color: rgba(0,0,0,0.05); }
+body.light-mode .rk-num { color: rgba(0,0,0,0.6); }
         `;
         document.head.appendChild(style);
     },

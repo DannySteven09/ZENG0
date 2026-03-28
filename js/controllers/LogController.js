@@ -57,14 +57,28 @@ const LogController = {
             case 'TAREA_COMPLETADA':
                 return `${quien} completó el cíclico "${d.categoria || ''}" · ${d.productos_contados || 0}/${d.productos_total || 0} productos contados`;
 
-            case 'TAREA_APROBADA':
-                return `${quien} aprobó el cíclico "${d.categoria || ''}" de ${d.auxiliar_nombre || 'auxiliar'}`;
+            case 'TAREA_APROBADA': {
+                const contados = d.productos_contados !== undefined
+                    ? ` · ${d.productos_contados}/${d.productos_total || 0} productos contados`
+                    : '';
+                return `${quien} entregó a Admin el cíclico "${d.categoria || ''}" de ${d.auxiliar_nombre || 'auxiliar'}${contados}`;
+            }
 
-            case 'TAREA_RECHAZADA':
-                return `${quien} rechazó el cíclico "${d.categoria || ''}" · Motivo: ${d.motivo_rechazo || 'sin especificar'}`;
+            case 'TAREA_RECHAZADA': {
+                const auxR = d.auxiliar_nombre ? ` · Auxiliar: ${d.auxiliar_nombre}` : '';
+                return `${quien} devolvió al auxiliar el cíclico "${d.categoria || ''}"${auxR} · Motivo: ${d.motivo_rechazo || 'sin especificar'}`;
+            }
 
-            case 'TAREA_DEVUELTA':
-                return `${quien} devolvió el cíclico "${d.categoria || ''}" para correcciones · Motivo: ${d.motivo_jefe || 'sin especificar'}`;
+            case 'TAREA_CANCELADA': {
+                const auxC = d.auxiliar_nombre ? ` de ${d.auxiliar_nombre}` : '';
+                return `${quien} canceló el cíclico "${d.categoria || ''}"${auxC} · Estado anterior: ${d.estado_anterior || '—'}`;
+            }
+
+            case 'TAREA_DEVUELTA': {
+                const motivo = d.motivo_rechazo || d.motivo_jefe || 'sin especificar';
+                const auxDev = d.auxiliar_nombre ? ` (aux: ${d.auxiliar_nombre})` : '';
+                return `${quien} devolvió el cíclico "${d.categoria || ''}"${auxDev} para correcciones · Motivo: ${motivo}`;
+            }
 
             // ── Hallazgos ───────────────────────────────────────
             case 'HALLAZGO_REPORTADO': {
@@ -76,21 +90,79 @@ const LogController = {
 
             case 'HALLAZGO_APROBADO': {
                 const prod = d.descripcion || d.upc || 'producto';
-                const aux = d.auxiliar_nombre || 'auxiliar';
+                const aux = d.auxiliar_nombre || prev.hallazgo_reportado_por || 'auxiliar';
                 const cant = d.cantidad || 0;
                 const ubic = d.ubicacion || '';
-                return `${quien} aprobó el hallazgo de ${aux}: ${prod} · ${cant} uds${ubic ? ' · Ubic: ' + ubic : ''}`;
+                const precioStr = d.precio_hallazgo ? ` · ₡${Number(d.precio_hallazgo).toLocaleString()} c/u` : '';
+                const valorStr = d.valor_hallazgo ? ` · Total: ₡${Number(d.valor_hallazgo).toLocaleString()}` : '';
+                return `${quien} aprobó el hallazgo de ${aux}: ${prod} · ${cant} uds${precioStr}${valorStr}${ubic ? ' · Ubic: ' + ubic : ''}`;
             }
 
-            case 'HALLAZGO_RECHAZADO':
-                return `${quien} rechazó el hallazgo #${d.id || ''} · Motivo: ${d.motivo_rechazo || 'sin especificar'}`;
+            case 'HALLAZGO_RECHAZADO': {
+                const prod = d.descripcion || d.upc || 'producto';
+                const aux = d.auxiliar_nombre || prev.hallazgo_reportado_por || 'auxiliar';
+                const cant = d.cantidad || 0;
+                return `${quien} rechazó el hallazgo de ${aux}: ${prod} · ${cant} uds`;
+            }
 
-            // ── Inventario ──────────────────────────────────────
+            // ── Conteos (Auxiliar) ──────────────────────────────
+            case 'CONTEO_REGISTRADO': {
+                const total = d.total || (d.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0) || 0;
+                const ubic = (d.conteos || []).map(c => c.ubicacion).filter(Boolean).join(', ') || 'sin ubicar';
+                return `${quien} registró conteo: UPC ${d.upc || '—'} · ${total} uds · Ubic: ${ubic}`;
+            }
+
+            case 'CONTEO_EDITADO': {
+                const antes = (prev.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0);
+                const despues = (d.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0);
+                return `${quien} editó conteo: UPC ${d.upc || '—'} · ${antes} → ${despues} uds`;
+            }
+
+            case 'CONTEO_ELIMINADO': {
+                const totalEliminado = (prev.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0);
+                return `${quien} eliminó conteo: UPC ${prev.upc || d.upc || '—'} · ${totalEliminado} uds`;
+            }
+
+            // ── Conteos en Revisión (Jefe) ───────────────────────
+            case 'CONTEO_AGREGADO_REVISION': {
+                const desc = d.descripcion || d.upc || '—';
+                const cantR = d.total || d.cantidad || 0;
+                const ubicR = d.ubicacion || 'sin ubicar';
+                return `${quien} agregó conteo en revisión: ${desc} · ${cantR} uds · Ubic: ${ubicR}`;
+            }
+
+            case 'CONTEO_EDITADO_REVISION': {
+                const descE = d.descripcion || d.upc || '—';
+                const antesR = (prev.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0) || prev.total || 0;
+                const despuesR = (d.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0) || d.total || 0;
+                return `${quien} corrigió conteo en revisión: ${descE} · ${antesR} → ${despuesR} uds`;
+            }
+
+            case 'CONTEO_ELIMINADO_REVISION': {
+                const descEl = prev.descripcion || prev.upc || d.upc || '—';
+                const cantEl = (prev.conteos || []).reduce((s, c) => s + (c.cantidad || 0), 0) || prev.total || 0;
+                return `${quien} eliminó conteo en revisión: ${descEl} · ${cantEl} uds`;
+            }
+
+            // ── Hallazgo agregado por Jefe ───────────────────────
+            case 'HALLAZGO_AGREGADO_JEFE': {
+                const prodH = d.descripcion || d.upc || 'producto';
+                const cantH = d.cantidad || d.total || 0;
+                const ubicH = d.ubicacion || '';
+                return `${quien} agregó hallazgo durante revisión: ${prodH} · ${cantH} uds${ubicH ? ' · Ubic: ' + ubicH : ''}`;
+            }
+
+            // ── Inventario y exportaciones ──────────────────────
             case 'IMPORT_PRODUCTOS':
-                return `${quien} cargó ${(d.total || 0).toLocaleString()} productos de NetSuite · ${d.categorias || 0} categorías · ${fecha}`;
+                return `${quien} importó ${(d.total || 0).toLocaleString()} productos desde NetSuite · ${d.categorias || 0} categorías · Archivo: ${d.archivo || '—'} · ${fecha}`;
+
+            case 'EXPORT_CICLICO': {
+                const auxEx = d.auxiliar_nombre ? ` · Aux: ${d.auxiliar_nombre}` : '';
+                return `${quien} exportó a Excel el cíclico "${d.categoria || ''}"${auxEx} · ${d.productos_total || 0} productos · ${d.archivo || '—'}`;
+            }
 
             case 'CICLO_CERRADO':
-                return `${quien} cerró el ciclo diario · ${fecha}`;
+                return `${quien} cerró el ciclo diario (datos eliminados) · ${fecha}`;
 
             // ── Fallback ────────────────────────────────────────
             default:

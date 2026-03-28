@@ -274,6 +274,26 @@ body.light-mode .auxiliar-item:hover { background: rgba(0,0,0,0.05); }
 
 /* ═══ Light Mode — Admin (inline styles override) ═══ */
 body.light-mode .admin-theme { background: #f5f5f5; color: #1a1a1a; }
+body.light-mode .admin-theme h1,
+body.light-mode .admin-theme h2,
+body.light-mode .admin-theme h3 { color: #1a1a1a; }
+body.light-mode .admin-theme .section-header span { color: rgba(0,0,0,0.45); }
+body.light-mode .admin-theme .metric-value { color: #1a1a1a; }
+body.light-mode .admin-theme .metric-label { color: rgba(0,0,0,0.55); }
+body.light-mode .admin-theme .admin-table th { color: rgba(0,0,0,0.5); }
+body.light-mode .admin-theme .admin-table td { color: #1a1a1a; border-bottom-color: rgba(0,0,0,0.06); }
+body.light-mode .admin-theme .filter-input { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: #1a1a1a; }
+/* Charts light mode: SVG text colors are injected via JS using the isLight flag */
+body.light-mode .chart-dark-card { background: linear-gradient(135deg,#f8f9ff 0%,#eef2ff 100%) !important; border-color: rgba(0,0,0,0.08) !important; }
+body.light-mode .chart-dark-card h3,
+body.light-mode .chart-dark-card .cdc-title { color: #1a1a1a !important; }
+body.light-mode .chart-dark-card .cdc-cat { color: rgba(0,0,0,0.6) !important; }
+body.light-mode .chart-dark-card .cdc-pct { color: rgba(0,0,0,0.4) !important; }
+body.light-mode .chart-dark-card .cdc-monto { color: #1a1a1a !important; }
+body.light-mode .chart-dark-card .cdc-bar-bg { background: rgba(0,0,0,0.06) !important; }
+body.light-mode .chart-dark-card .cdc-footer { border-top-color: rgba(0,0,0,0.08) !important; }
+body.light-mode .chart-dark-card .cdc-footer-label { color: rgba(0,0,0,0.45) !important; }
+body.light-mode .chart-dark-card .cdc-footer-val { color: #1a1a1a !important; }
 
 /* Modo offline */
 body.offline-mode::after {

@@ -32,6 +32,23 @@ const AdminController = {
                 window.ZENGO?.toast('Error al guardar los productos', 'error');
             }
 
+            try {
+                const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+                const cats = result.categories ? result.categories.size : 0;
+                await window.LogController?.registrar({
+                    tabla: 'productos',
+                    accion: 'IMPORT_PRODUCTOS',
+                    registro_id: null,
+                    usuario_id: s.id || null,
+                    usuario_nombre: s.name || 'Admin',
+                    datos_nuevos: {
+                        total: result.items?.length || 0,
+                        categorias: cats,
+                        archivo: file.name
+                    }
+                });
+            } catch (e) { /* no bloquear importación */ }
+
             this.showImportSummary(result);
 
             if (typeof window.AdminView !== 'undefined') {
@@ -320,6 +337,23 @@ const AdminController = {
             XLSX.utils.book_append_sheet(wb, ws, nombre.substring(0, 31));
             XLSX.writeFile(wb, `ZENGO_Ciclico_${nombre}.xlsx`);
 
+            try {
+                const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+                await window.LogController?.registrar({
+                    tabla: 'tareas',
+                    accion: 'EXPORT_CICLICO',
+                    registro_id: tarea.id,
+                    usuario_id: s.id || null,
+                    usuario_nombre: s.name || 'Admin',
+                    datos_nuevos: {
+                        categoria: tarea.categoria,
+                        auxiliar_nombre: tarea.auxiliar_nombre,
+                        productos_total: productos.length,
+                        archivo: `ZENGO_Ciclico_${nombre}.xlsx`
+                    }
+                });
+            } catch (e) { /* no bloquear exportación */ }
+
             window.ZENGO?.toast('Exportado correctamente', 'success');
         } catch (err) {
             console.error('Error exportando cíclico:', err);
@@ -373,6 +407,18 @@ const AdminController = {
                 if (window.db.cola_sync)             await window.db.cola_sync.clear();
                 if (window.db.ubicaciones_historico) await window.db.ubicaciones_historico.clear();
             }
+
+            try {
+                const s = JSON.parse(localStorage.getItem('zengo_session') || '{}');
+                await window.LogController?.registrar({
+                    tabla: 'sistema',
+                    accion: 'CICLO_CERRADO',
+                    registro_id: null,
+                    usuario_id: s.id || null,
+                    usuario_nombre: s.name || 'Admin',
+                    datos_nuevos: {}
+                });
+            } catch (e) { /* no bloquear cierre */ }
 
             return { ok: true };
         } catch (error) {
